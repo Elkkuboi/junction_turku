@@ -25,6 +25,7 @@ write.csv(pohja, "data/johdettu/kulkupohja.csv", row.names = FALSE)
 write.csv(tulos$passages, "data/johdettu/ohikulut.csv", row.names = FALSE)
 write.csv(tulos$events, "data/johdettu/tapahtumat_tunti.csv", row.names = FALSE)
 write.csv(tulos$maintenance, "data/johdettu/huoltotoimet.csv", row.names = FALSE)
+write.csv(tulos$slipperiness, "data/johdettu/liukkaus_paiva.csv", row.names = FALSE)
 write.csv(tulos$summary, "data/johdettu/vertailu_tunti.csv", row.names = FALSE)
 saveRDS(tulos, "data/johdettu/tammikuu.rds")
 jsonlite::write_json(list(params = tammikuu, area = as.list(alue), cell_size_m = ruutukoko_m,

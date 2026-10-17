@@ -18,9 +18,10 @@ Aja repon juuresta:
 
 ```sh
 cd If/labra/v0
-script aja_tammikuu.R
+Rscript aja_tammikuu.R
 Rscript tarkista.R
-Rscript tarkista_tammikuu.RR
+Rscript tarkista_tammikuu.R
+Rscript tarkista_hyoty.R
 ```
 
 Avaa `tulokset/tammikuu.html` selaimessa. Tiedosto sisältää kartan ja tulokset;
@@ -43,11 +44,11 @@ Se tuottaa `grid.csv`, `true_falls.csv` ja `tulokset/kaatumiset.png`.
 | `R/piirra_grid.R`, `R/lue_kartta.R` | Staattinen karttakuva ja kartan rajauksen tarkistus |
 | `R/lue_saa.R` | Sää-CSV:n luku ja tuntikeskiarvot |
 | `R/luo_kulkupohja.R` | Reittien lähellä olevat ruudut ja oletetut kulkemismäärät |
-| `R/simuloi_tammikuu.R` | Paritettu huoltovaihtoehtojen simulaatio |
-| `R/vertaa_siemenet.R` | Toistaa vertailun eri satunnaissiemenillä |
+| `R/simuloi_tammikuu.R` | Viiden huoltopolitiikan paritettu simulaatio ja beta-binomiaalinen posteriori |
+| `R/vertaa_siemenet.R` | Toistaa vertailun eri satunnaissiemenillä, valinnaisesti rinnakkain |
 | `R/kirjoita_toisto.R`, `toisto/` | Tulosten esittäminen selaimessa; ei mallilaskentaa |
 | `lataa_kartta.R` | Kartan lataaminen uudelleen, jos aluerajausta muutetaan |
-| `tarkista.R`, `tarkista_tammikuu.R` | Kohdistuksen ja simulaation kontrollikokeet |
+| `tarkista.R`, `tarkista_tammikuu.R`, `tarkista_hyoty.R` | Kohdistuksen, simulaation ja hyödyn kontrollikokeet |
 | `data/alkuperainen/` | Ladattu kartta ja käyttäjän toimittama sää-CSV |
 | `data/oletukset/reitit.csv` | Käsin hahmotellut esimerkkireitit ja oletetut tuntimäärät |
 | `data/johdettu/`, `tulokset/` | Uudelleen tuotettavat tulokset, Gitin ulkopuolella |
@@ -93,48 +94,61 @@ ympäristössä HTTP 406; tammikuun laskuridataa ei ole ladattu.
 
 ## Mitä simulaatio vertaa
 
-1. Molemmilla vaihtoehdoilla on samat sääolot, ohikulut ja satunnaisluvut.
-2. Liukastumisen todennäköisyys riippuu lähtötasosta, säästä ja simulaattorin
-   piilevästä paikallisesta vaihtelusta. Sääkerroin on oma kokeellinen sääntö
-   tiedostossa `R/simuloi_tammikuu.R`. Sitä ei ole kalibroitu tienpinnan havaintoihin.
-3. Oletusotoksessa 25 % ohikuluista havaitaan sovelluksella. Liukastumisista
-   tunnistetaan oletuksena 80 %; mukana on myös virhehavaintoja.
-   Oletuksena 2 % simuloiduista liukastumisista johtaa kaatumiseen.
-4. Molemmissa huolletaan kaksi 50 × 50 metrin kohdetta kuuden tunnin välein:
-   tammikuussa 248 toimea kummassakin. Tämä yhtäläistää toimien määrän ja pinta-alan;
-   todellisia työaikoja, siirtymiä tai kustannuksia ei mallinneta.
-5. Aikatauluvaihtoehto kiertää kohteita järjestyksessä. Tuotevaihtoehto valitsee
-   suurimman pistemäärän: edeltävien 12 tunnin havainnot + 0.002 × saman ajan
-   sovelluksessa havaitut ohikulut. Määrää käytetään priorisointiin. Piilevä
-   liukkaus ja tulevat havainnot eivät ole ohjauksen käytössä.
-6. Hiekoitus pienentää liukastumisen todennäköisyyttä oletuksena 60 % ajaksi
-   12 tuntia. Havaintomäärä syntyy tämän jälkeen arvonnasta. Aiempia havaintoja
-   ei poisteta huollon kohdalla.
+Mallin tarkka matemaattinen kuvaus ja todistus ovat kansiossa `paperi/`.
 
-Kartalla väri kertoo viimeisten 12 tunnin havaintomäärän samalla asteikolla
-molemmille vaihtoehdoille. Vihreä rajaus kertoo voimassa olevan simuloidun
-hiekoituksen ja H uuden huoltotoimen. Kaatumisten kertymä sisältää myös
-sovellusotoksen ulkopuoliset simuloidut kaatumiset.
+1. Kaikilla politiikoilla on samat sääolot, ohikulut, piilevä liukkaus ja satunnaisluvut.
+2. Jokaisella kulkuruudulla on päivän piilevä liukkaus `L` välillä 0–1. Se arvotaan
+   Beta(0.25, 1) -jakaumasta, joka on diskretoitu 40 yhtä todennäköiseen tasoon.
+   Neljänneksellä ruuduista `L < 0.004`, joka kuudennella `L > 0.5`. Liukkaus
+   arvotaan uudelleen jokaisen paikallisen vuorokauden alussa; `pysyvyys` on
+   todennäköisyys, että ruudun edellisen päivän liukkaus säilyy (oletus 0).
+3. Liukastumisen todennäköisyys ohikulkua kohti on
+   `0.01 × sääkerroin × L × (1 − 0.8 × hiekoitettu)`. Sääkerroin on oma kokeellinen
+   sääntö tiedostossa `R/simuloi_tammikuu.R`; sitä ei ole kalibroitu tienpinnan havaintoihin.
+4. Kaikki ohikulut havaitaan. Tärinätunnistus havaitsee liukastumisista 80 % ja
+   tekee virhehavainnon 0.02 %:ssa muista ohikuluista. Liukastumisista 2 % johtaa kaatumiseen.
+5. Huolletaan kaksi 50 × 50 metrin aluetta kuuden tunnin välein: tammikuussa 248
+   toimea jokaisessa huoltavassa politiikassa. Hiekoitus vaikuttaa 6 tuntia.
+   Päällekkäinen hiekoitus ei ole sallittu: aluetta ei valita, jos sen edellinen
+   hiekoitus on vielä voimassa. Todellisia työaikoja, siirtymiä tai kustannuksia ei mallinneta.
+6. Politiikat:
+   - `ei_huoltoa`: vertailukohta.
+   - `aikataulu`: kiertää alueita järjestyksessä.
+   - `kulku`: hiekoittaa alueet, joilla odotettu ohikulkumäärä on suurin. Paras
+     politiikka, joka ei käytä tärinähavaintoja (paperin lause 1).
+   - `tuote`: laskee jokaiselle ruudulle päivän liukkauden posteriorin
+     tärinähavainnoista ja ohikuluista (Beta-priori, binomiaalinen havaintomalli)
+     ja hiekoittaa alueet, joilla odotettu liukastumisaltistus on suurin.
+   - `oraakkeli`: tuntee piilevän liukkauden; alaraja kaatumisille.
 
-`vertailu_tunti.csv` sisältää toteutuneet ja odotetut kaatumismäärät sekä huoltotoimien
-määrän. Odotusarvo lasketaan simulaattorin todennäköisyyksistä arviointia varten.
-Muut tulokset: `saa_tunti.csv`, `kulkupohja.csv`, `ohikulut.csv`,
-`tapahtumat_tunti.csv`, `huoltotoimet.csv`, `tammikuu.rds` ja `ajotiedot.json`.
-Viimeinen sisältää asetukset, R-version ja syötteiden tiivisteet.
+   Ohjaus käyttää vain päätöstä edeltäviä tunteja. Piilevä liukkaus on vain
+   simulaattorin ja oraakkelin tiedossa.
+
+Kartalla näytetään `aikataulu` ja `tuote`. Väri kertoo viimeisten 12 tunnin
+tärinähavainnot samalla asteikolla molemmille. Vihreä rajaus kertoo voimassa
+olevan simuloidun hiekoituksen ja H uuden huoltotoimen. Sivulla näkyvät myös
+kaikkien politiikkojen kertyneet odotetut kaatumiset.
+
+`vertailu_tunti.csv` sisältää jokaiselle politiikalle toteutuneet ja odotetut
+kaatumismäärät sekä huoltotoimien määrän. Odotusarvo lasketaan simulaattorin
+todennäköisyyksistä toteutuneilla ohikuluilla ja liukkaudella; se on
+yksittäistä arvontaa luotettavampi vertailumittari. Piilevä liukkaus on
+tiedostossa `liukkaus_paiva.csv`. Muut tulokset: `saa_tunti.csv`, `kulkupohja.csv`,
+`ohikulut.csv`, `tapahtumat_tunti.csv`, `huoltotoimet.csv`, `tammikuu.rds` ja
+`ajotiedot.json`. Viimeinen sisältää asetukset, R-version ja syötteiden tiivisteet.
 
 Kaikki huolto on simuloitua: aikatauluvaihtoehto ei kuvaa Turun todellista toimintaa.
-Ifin asiakkaita tai euroja ei ole eroteltu. Hyötymittari on kaatumistapahtumien erotus
-samalla toimimäärällä. Yksi ajo ei osoita tuotteen todellista vaikuttavuutta;
-vaihda siementä ja vaikutusoletuksia tuloksen herkkyyden tutkimiseksi.
+Ifin asiakkaita tai euroja ei ole eroteltu. Hyötymittari on odotettujen kaatumisten
+erotus samalla toimimäärällä. Yksi ajo ei osoita tuotteen todellista vaikuttavuutta;
+vaihda siementä ja oletuksia tuloksen herkkyyden tutkimiseksi.
 
-Hyödyn oletukset, vertailun rajoitus ja tasaisen vaaratason kontrolli:
-[HYOTY.md](HYOTY.md). Kontrollin voi ajaa komennolla `Rscript tarkista_hyoty.R`.
+Hyödyn ehdot ja kontrollit: [HYOTY.md](HYOTY.md).
 
-Esimerkiksi kymmenen siementä R:ssä v0-kansiosta:
+Esimerkiksi 40 siementä neljällä ytimellä R:ssä v0-kansiosta:
 
 ```r
 source("aja_tammikuu.R")
 source("R/vertaa_siemenet.R")
-herkkyys <- vertaa_siemenet(pohja, saa, tammikuu, 1:10)
+herkkyys <- vertaa_siemenet(pohja, saa, tammikuu, 1:40, ytimia = 4)
 write.csv(herkkyys, "tulokset/herkkyys.csv", row.names = FALSE)
 ```

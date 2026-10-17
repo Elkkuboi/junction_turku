@@ -4,7 +4,7 @@ kirjoita_toisto <- function(tulos, pohja, saa, alue, ruutukoko_m, p, kartta, pol
   vyohykkeet <- unique(pohja[, c("zone_id", "zone_xmin", "zone_ymin")])
   data <- list(
     area = as.list(alue), cellSize = ruutukoko_m, blockSize = p$huoltoalue_m,
-    window = p$havaintoikkuna_h, params = p,
+    window = p$havaintoikkuna_h, params = p, policies = tulos$policies,
     cells = pohja[, c("cell_id", "x", "y")], zones = vyohykkeet,
     times = paste0(format(saa$time_utc, "%d.%m.%Y %H:%M", tz = "Europe/Helsinki"),
                    "–", format(saa$time_utc + 3600, "%H:%M", tz = "Europe/Helsinki")),

@@ -1,60 +1,46 @@
 # Mihin simuloitu hyöty perustuu?
 
-Tapahtumat arvotaan toisistaan riippumattomina **ehdolla**, että paikallinen
-vaarataso, sää, kulkeminen ja huoltotila tunnetaan. Eri paikoille ei kuitenkaan
-anneta samaa vaaratasoa. Kunkin huoltoalueen piilevä kerroin arvotaan kerran ja
-säilytetään koko kuukauden. Tämän vuoksi saman paikan aiemmat havainnot voivat
-kertoa myös sen tulevista tapahtumista. Yksi liukastuminen ei aiheuta seuraavaa.
+Täsmällinen malli, oletukset ja todistukset: [paperi/simulaattori.pdf](paperi/simulaattori.pdf).
+Tämä tiedosto tiivistää ne.
 
-Nykyisessä mallissa odotettu kaatumismäärä on karkeasti
+Ruudun päivän piilevä liukkaus `L` vaihtelee voimakkaasti ruuduittain ja päivittäin.
+Tapahtumat arvotaan toisistaan riippumattomina **ehdolla**, että liukkaus, sää,
+kulkeminen ja huoltotila tunnetaan. Saman päivän aiemmat tärinähavainnot kertovat
+siksi ruudun loppupäivän liukkaudesta. Yksi liukastuminen ei aiheuta seuraavaa.
+
+Odotettu kaatumismäärä ruudussa tunnilla on
 
 ```
-ohikulut × liukastumistodennäköisyys × kaatumistodennäköisyys liukastumisesta
+ohikulut × 0.01 × sääkerroin × L × (1 − 0.8 × hiekoitettu) × 0.02
 ```
 
-Sama hiekoitus voi siten estää enemmän kaatumisia vilkkaassa tai vaarallisessa
-paikassa. Hiekoituksen 60 prosentin vaikutus ja 12 tunnin kesto ovat oletuksia.
-Näitä vaikutuksia tai paikallista vaaratason vaihtelua ei ole mitattu tästä aineistosta.
-Käytössä oleva todellinen aineisto on sää ja kartta.
+Koska päällekkäinen hiekoitus on kielletty, jokainen ruutu-tunti on enintään yhden
+hiekoituksen piirissä. Silloin politiikan hyöty jakautuu summaksi huoltokierroksittain.
 
-## Mitä nykyinen vertailu ei erottele
+## Mitä paperissa todistetaan
 
-Aikatauluvaihtoehto kiertää kohteet järjestyksessä. Tuotevaihtoehto käyttää sekä
-kulkemista että tapahtumahavaintoja. Mahdollinen ero sisältää molempien tietojen
-vaikutuksen. Se ei yksin osoita tapahtumahavaintojen lisäarvoa tai Ifin tuotteen
-todellista vaikuttavuutta. Aikatauluvaihtoehto ei ole Turun todellisen huollon malli.
+Oletusasetuksilla vaikutusaika on enintään huoltoväli ja huoltokierrokset alkavat
+vuorokauden vaihteessa. Silloin odotusarvoissa pätee:
 
-Pelkkään kulkemiseen perustuvan kohdistuksen saa asettamalla
-`havaintopaino = 0`. Arvo 1 käyttää myös tapahtumahavaintoja. Tätä vertailua
-tarvitaan ennen tapahtumahavaintojen hyötyä koskevaa johtopäätöstä.
+1. `kulku` on paras politiikka, joka ei käytä tärinähavaintoja; esimerkiksi
+   `aikataulu` ei voi olla sitä parempi.
+2. `tuote` on vähintään yhtä hyvä kuin mikä tahansa havaintoja käyttämätön politiikka.
+3. `oraakkeli` on vähintään yhtä hyvä kuin mikä tahansa politiikka.
+4. `tuote` on aidosti `kulku`a parempi, jos tunnistus erottelee liukastumiset
+   virhehavainnoista (`tunnistus_p > virhehavainto_p`), liukkaus vaihtelee ja
+   jollakin päivän kierroksella on saman päivän havaintoja.
 
-```r
-source("aja_tammikuu.R")
-pelkka_kulkeminen <- tammikuu
-pelkka_kulkeminen$havaintopaino <- 0
-ilman_havaintoja <- simuloi_tammikuu(pohja, saa, pelkka_kulkeminen)
-```
+Ilman liukkauden vaihtelua tai erottelevaa tunnistusta havainnoista ei ole hyötyä.
+Väitteet koskevat simulaattorin maailmaa. Turun todellista liukkautta,
+hiekoituksen vaikutusta tai Ifin vahinkoja ei ole mitattu.
 
-Kymmenen siemenen erittely samoilla maailmoilla:
+## Kontrollit
 
-```r
-source("R/vertaa_siemenet.R")
-a <- vertaa_siemenet(pohja, saa, tammikuu, 1:10)
-b <- vertaa_siemenet(pohja, saa, pelkka_kulkeminen, 1:10)
-vertailu <- data.frame(seed = a$seed, aikataulu = a$falls_schedule,
-  pelkka_kulkeminen = b$falls_product, havainnot_ja_kulkeminen = a$falls_product,
-  havaintojen_odotettu_lisaarvo = a$expected_difference - b$expected_difference)
-write.csv(vertailu, "tulokset/havaintojen_lisaarvo.csv", row.names = FALSE)
-```
+`Rscript tarkista_hyoty.R` asettaa kaikille ruuduille saman liukkauden ja saman
+kulkemisen. Kontrolli tarkistaa kymmenellä siemenellä, että kaikkien huoltavien
+politiikkojen odotettu kaatumismäärä on sama.
 
-## Tasaisen vaaratason kontrolli
-
-`Rscript tarkista_hyoty.R` asettaa kaikille ruuduille saman vaaratason ja saman
-kulkemisen. Molemmissa vaihtoehdoissa on samalla hetkellä yhtä monta samankokoista
-huollettua ruutua. Kontrolli tarkistaa kymmenellä siemenellä, että odotettu
-kaatumismäärä on molemmissa sama. Toteutuneet arvotut määrät voivat silti erota.
-
-Kontrollissa huollon vaikutusaika on sama kuin huoltoväli. Näin päällekkäiset
-huollot eivät muuta suojattua pinta-alaa. Kuukausidemon oletuksilla sama toimimäärä
-ei takaa samaa suojattua pinta-alaa: sama kohde voidaan hiekoittaa uudelleen ennen
-edellisen vaikutuksen päättymistä. Tämäkin voi vaikuttaa vaihtoehtojen eroon.
+`Rscript tarkista_tammikuu.R` tarkistaa muun muassa, että beta-binomiaalinen
+päivitys vastaa suoraan laskettua posterioria, että täydellisellä tunnistuksella
+saadaan konjugaatti Beta(a + y, b + n − y), ettei päällekkäistä hiekoitusta synny
+pidemmälläkään vaikutusajalla ja ettei tuleva sää vaikuta menneisiin päätöksiin.

@@ -53,6 +53,7 @@ Se tuottaa `grid.csv`, `true_falls.csv` ja `tulokset/kaatumiset.png`.
 | `data/oletukset/reitit.csv` | Käsin hahmotellut esimerkkireitit ja oletetut tuntimäärät |
 | `data/johdettu/`, `tulokset/` | Uudelleen tuotettavat tulokset, Gitin ulkopuolella |
 | `paperi/` | Mallin matemaattinen kuvaus ja todistukset (`simulaattori.pdf`), taulukoiden laskenta |
+| `aja_demo.R` | Live-demon data (`simulation.json`) ja taustakartta Pito-dashboardin demosivulle |
 
 ## Kartta ja sijainti
 
@@ -161,3 +162,23 @@ source("R/vertaa_siemenet.R")
 herkkyys <- vertaa_siemenet(pohja, saa, tammikuu, 1:40, ytimia = 4)
 write.csv(herkkyys, "tulokset/herkkyys.csv", row.names = FALSE)
 ```
+
+## Live-demo
+
+Pito-dashboardin demosivu (`dashboard/demo.html` repossa
+[Johottaja/if-hackathon-project](https://github.com/Johottaja/if-hackathon-project))
+lukee tämän simulaattorin tuottaman datan. Kun repot ovat rinnakkain, aja v0-kansiosta:
+
+```sh
+Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo
+```
+
+Skripti ajaa oletussimulaation (siemen 42) ja kirjoittaa kohdistetun huollon (`tuote`)
+kaatumiset, tärinähavainnot ja hiekoitukset sekä aikataulun mukaisen huollon
+(`aikataulu`) hiekoitukset. Kaatumisten esitysminuutit, sijainnit ruudun sisällä ja
+tieto siitä, havaitsiko tärinätunnistus kaatumisen, arvotaan erillisellä siemenellä.
+Simulaation tulokset eivät siksi muutu. Havaittujen kaatumisten määrä on
+hypergeometrinen, koska kaatuminen ja tunnistus ovat liukastumisesta riippumattomia.
+Estetyt kaatumiset ja "lisäkaatumiset" lasketaan ruutu-tunneittain yhteisillä
+satunnaisluvuilla. Jos `paperi/tulokset.csv` on olemassa, mukaan tulee myös 200 siemenen keskiarvo.
+

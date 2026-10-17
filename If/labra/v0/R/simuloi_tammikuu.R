@@ -109,8 +109,8 @@ simuloi_tammikuu <- function(pohja, saa, p) {
       todennakoisyys <- pii[t] * L * suoja
       liuk <- qbinom(u[, 1], ohikulut, todennakoisyys)
       kaatumiset <- qbinom(u[, 2], liuk, p$kaatuminen_liukastumisesta_p)
-      havainnot <- qbinom(u[, 3], liuk, p$tunnistus_p) +
-        qbinom(u[, 4], ohikulut - liuk, p$virhehavainto_p)
+      tunnistetut <- qbinom(u[, 3], liuk, p$tunnistus_p)
+      havainnot <- tunnistetut + qbinom(u[, 4], ohikulut - liuk, p$virhehavainto_p)
       if (politiikat[s] == "tuote") {
         logw <- paivita_posteriori(logw, havainnot, ohikulut, outer(pii[t] * suoja, tasot), p)
       }
@@ -124,7 +124,9 @@ simuloi_tammikuu <- function(pohja, saa, p) {
       tapahtumat[[length(tapahtumat) + 1]] <- list(s = rep(s, length(mukana)),
                                                    t = rep(t, length(mukana)), i = mukana,
                                                    havainnot = havainnot[mukana],
-                                                   kaatumiset = kaatumiset[mukana])
+                                                   kaatumiset = kaatumiset[mukana],
+                                                   liukastumiset = liuk[mukana],
+                                                   tunnistetut = tunnistetut[mukana])
     }
     ohikulkumatriisi[, t] <- ohikulut
     kehykset[[t]] <- kehys
@@ -141,7 +143,9 @@ simuloi_tammikuu <- function(pohja, saa, p) {
                            time_utc = aikaleima[kentta(tapahtumat, "t")],
                            cell_id = pohja$cell_id[kentta(tapahtumat, "i")],
                            observations = kentta(tapahtumat, "havainnot"),
-                           falls = kentta(tapahtumat, "kaatumiset"), is_simulated = TRUE),
+                           falls = kentta(tapahtumat, "kaatumiset"),
+                           slips = kentta(tapahtumat, "liukastumiset"),
+                           detected_slips = kentta(tapahtumat, "tunnistetut"), is_simulated = TRUE),
        passages = data.frame(time_utc = rep(aikaleima, each = n), cell_id = pohja$cell_id,
                              passages = c(ohikulkumatriisi), is_simulated = TRUE),
        slipperiness = data.frame(date = rep(names(piilo), each = n), cell_id = pohja$cell_id,

@@ -59,6 +59,7 @@ simuloi_tammikuu <- function(pohja, saa, p) {
   kooste <- matrix(0, nt * S, 5, dimnames = list(NULL, c("passages", "observations", "falls",
                                                           "expected_falls", "maintenance_actions")))
   ohikulkumatriisi <- matrix(0L, n, nt)
+  posteriori <- matrix(0, n, nt)   # tuotteen liukkausarvio kunkin tunnin alussa (demoa varten)
   huolto <- tapahtumat <- piilo <- list()
 
   for (t in seq_len(nt)) {
@@ -69,6 +70,7 @@ simuloi_tammikuu <- function(pohja, saa, p) {
       logw <- log(p$pysyvyys * exp(logw) + (1 - p$pysyvyys) / G)
       piilo[[pvm[t]]] <- L
     }
+    posteriori[, t] <- drop(exp(logw) %*% tasot)
     odotetut_ohikulut <- pohja$ohikulkuja_h * rytmi[t]
     ohikulut <- if (p$kulkeminen_satunnainen) rpois(n, odotetut_ohikulut) else round(odotetut_ohikulut)
     u <- matrix(runif(n * 4), ncol = 4)
@@ -150,5 +152,5 @@ simuloi_tammikuu <- function(pohja, saa, p) {
                              passages = c(ohikulkumatriisi), is_simulated = TRUE),
        slipperiness = data.frame(date = rep(names(piilo), each = n), cell_id = pohja$cell_id,
                                  slipperiness = unlist(piilo, use.names = FALSE), is_simulated = TRUE),
-       levels = tasot, weather_factor = kerroin)
+       posterior_start = posteriori, rhythm = rytmi, levels = tasot, weather_factor = kerroin)
 }

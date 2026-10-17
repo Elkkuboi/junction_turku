@@ -175,7 +175,9 @@ Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo
 
 Skripti ajaa oletussimulaation (siemen 42) ja kirjoittaa kohdistetun huollon (`tuote`)
 kaatumiset, tärinähavainnot ja hiekoitukset sekä aikataulun mukaisen huollon
-(`aikataulu`) hiekoitukset. Kaatumisten esitysminuutit, sijainnit ruudun sisällä ja
+(`aikataulu`) hiekoitukset. Asiakas- ja If-näkymiä varten mukana ovat myös tuotteen
+liukkausarvio (posteriorin odotusarvo) jokaisen tunnin alussa, ruutujen reitit ja
+vuorokausirytmi. Kaatumisten esitysminuutit, sijainnit ruudun sisällä ja
 tieto siitä, havaitsiko tärinätunnistus kaatumisen, arvotaan erillisellä siemenellä.
 Simulaation tulokset eivät siksi muutu. Havaittujen kaatumisten määrä on
 hypergeometrinen, koska kaatuminen ja tunnistus ovat liukastumisesta riippumattomia.

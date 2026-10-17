@@ -15,8 +15,8 @@ dir.create(kohde, recursive = TRUE, showWarnings = FALSE)
 
 polku <- list.files("data/alkuperainen/saa", pattern = "[.]csv$", full.names = TRUE)
 saa <- lue_saa(polku)
-pohja <- luo_kulkupohja(luo_grid(alue, ruutukoko_m), read.csv("data/oletukset/reitit.csv"),
-                        ruutukoko_m, tammikuu$huoltoalue_m)
+reitit <- read.csv("data/oletukset/reitit.csv")
+pohja <- luo_kulkupohja(luo_grid(alue, ruutukoko_m), reitit, ruutukoko_m, tammikuu$huoltoalue_m)
 kartta <- lue_kartta("data/alkuperainen/kartta/turku.png", alue)
 p <- tammikuu
 tulos <- simuloi_tammikuu(pohja, saa, p)
@@ -70,6 +70,24 @@ kertyma <- function(sarake) sapply(politiikat, function(s) {
   round(cumsum(tulos$summary[[sarake]][tulos$summary$scenario == s]), 3)
 }, simplify = FALSE)
 alueet <- unique(pohja[, c("zone_id", "zone_xmin", "zone_ymin")])
+# Ruudun lähin reitti (sama 5 metrin sääntö kuin kulkupohjassa); asiakasnäkymän reitit.
+reittinimet <- unique(reitit$reitti)
+etaisyys <- sapply(reittinimet, function(r) {
+  q <- reitit[reitit$reitti == r, ]
+  q <- q[order(q$jarjestys), ]
+  d <- rep(Inf, nrow(pohja))
+  for (i in seq_len(nrow(q) - 1)) {
+    dx <- q$x[i + 1] - q$x[i]; dy <- q$y[i + 1] - q$y[i]
+    u <- pmax(0, pmin(1, ((pohja$x - q$x[i]) * dx + (pohja$y - q$y[i]) * dy) / (dx^2 + dy^2)))
+    d <- pmin(d, sqrt((pohja$x - q$x[i] - u * dx)^2 + (pohja$y - q$y[i] - u * dy)^2))
+  }
+  d
+})
+reittien_pisteet <- lapply(reittinimet, function(r) {
+  q <- reitit[reitit$reitti == r, ]
+  q <- q[order(q$jarjestys), ]
+  list(name = r, x = I(round(q$x - alue[["xmin"]], 1)), y = I(round(q$y - alue[["ymin"]], 1)))
+})
 L <- tulos$slipperiness
 
 monte_carlo <- NULL
@@ -105,7 +123,12 @@ demo <- list(
     simulated = TRUE),
   weather = list(temp = round(saa$temp_c, 1), factor = round(tulos$weather_factor, 2)),
   cells = sarakkeet(data.frame(id = pohja$cell_id, x = pohja$x - alue[["xmin"]],
-                               y = pohja$y - alue[["ymin"]], perHour = pohja$ohikulkuja_h)),
+                               y = pohja$y - alue[["ymin"]], perHour = pohja$ohikulkuja_h,
+                               zone = pohja$zone_id, route = max.col(-etaisyys, ties.method = "first") - 1L)),
+  routes = reittien_pisteet,
+  rhythm = round(tulos$rhythm, 4),
+  # Tuotteen liukkausarvio kunkin tunnin alussa, tunti kerrallaan (tunti * ruutuja + ruutu).
+  posterior = round(c(tulos$posterior_start), 4),
   zones = sarakkeet(data.frame(id = alueet$zone_id, x = alueet$zone_xmin - alue[["xmin"]],
                                y = alueet$zone_ymin - alue[["ymin"]])),
   grit = list(targeted = huolto(kohdistettu), baseline = huolto(vertailu)),

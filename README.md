@@ -6,11 +6,13 @@ GitHub-repositorio: [Elkkuboi/junction_turku](https://github.com/Elkkuboi/juncti
 ## Nykyinen sisältö
 
 Repossa on haasteiden taustamateriaaleja sekä synteettinen mikrobiologia-aineisto.
-Sovelluskoodia, teknologiavalintoja tai sovelluksen käynnistyskomentoja ei ole vielä määritelty.
+Varsinaista palvelusovellusta ei ole vielä toteutettu. If-materiaalien rinnalla
+on paikallinen HTML-työkalu datan formaattien ja yksinkertaisten mallien tutkimiseen.
 
 | Polku | Sisältö |
 | --- | --- |
 | `If/` | If-haasteen PDF-materiaalit |
+| [If/research/data-model-map/](If/research/data-model-map/README.md) | Interaktiivinen data- ja mallikartta, esimerkit ja ajokomennot |
 | `redstone/` | Redstone / A'Pelago -haasteen PDF-materiaali |
 | `tyx-mylab/` | Tyks x Mylab -haasteen PDF-materiaalit ja osallistujaopas |
 | `tyx-mylab/data/` | Synteettinen mikrobiologia-aineisto CSV-muodossa ja sen kuvaus |

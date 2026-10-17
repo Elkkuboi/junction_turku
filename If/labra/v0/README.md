@@ -18,9 +18,9 @@ Aja repon juuresta:
 
 ```sh
 cd If/labra/v0
-Rscript aja_tammikuu.R
+script aja_tammikuu.R
 Rscript tarkista.R
-Rscript tarkista_tammikuu.R
+Rscript tarkista_tammikuu.RR
 ```
 
 Avaa `tulokset/tammikuu.html` selaimessa. Tiedosto sisältää kartan ja tulokset;

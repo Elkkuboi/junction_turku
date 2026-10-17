@@ -6,7 +6,7 @@ simuloi_tammikuu <- function(pohja, saa, p) {
   stopifnot(nz >= p$huoltokohteita, p$huollon_teho >= 0, p$huollon_teho <= 1)
   set.seed(p$seed)
   # Piilevä paikallinen vaihtelu on vain simulaattorin tiedossa.
-  paikallinen <- exp(rnorm(nz, mean = -0.3, sd = 0.8))[pohja$zone_id]
+  paikallinen <- exp(rnorm(nz, mean = -0.3, sd = p$paikallinen_sd))[pohja$zone_id]
   saakerroin <- 0.7 + 1.2 * (saa$temp_c >= -3 & saa$temp_c <= 1) +
     0.6 * (saa$snow_cm > 0) + 0.5 * (saa$rain_mean_mm > 0 & saa$temp_c < 1)
   tuore <- lapply(1:2, function(i) matrix(0L, n, p$havaintoikkuna_h))
@@ -22,7 +22,8 @@ simuloi_tammikuu <- function(pohja, saa, p) {
     viikonpaiva <- as.integer(format(saa$time_utc[t], "%u", tz = "Europe/Helsinki"))
     rytmi <- (0.1 + 0.8 * exp(-((tunti - 8) / 2)^2) +
                 0.9 * exp(-((tunti - 17) / 3)^2)) * ifelse(viikonpaiva >= 6, 0.7, 1)
-    ohikulut <- rpois(n, pohja$ohikulkuja_h * rytmi)
+    odotetut_ohikulut <- pohja$ohikulkuja_h * rytmi
+    ohikulut <- if (p$kulkeminen_satunnainen) rpois(n, odotetut_ohikulut) else round(odotetut_ohikulut)
     app <- rbinom(n, ohikulut, p$sovelluksen_osuus)
     u <- matrix(runif(n * 6), ncol = 6)
     slotti <- (t - 1) %% p$havaintoikkuna_h + 1
@@ -37,7 +38,7 @@ simuloi_tammikuu <- function(pohja, saa, p) {
           seuraava <- seuraava + p$huoltokohteita
         } else {
           # Vain aiemmat havainnot ja aiemmin havaitut ohikulut vaikuttavat valintaan.
-          piste <- rowSums(tuore[[s]]) + p$havaintopriorin_p * rowSums(kulkuhistoria)
+          piste <- p$havaintopaino * rowSums(tuore[[s]]) + p$havaintopriorin_p * rowSums(kulkuhistoria)
           piste <- vapply(seq_len(nz), function(z) sum(piste[pohja$zone_id == z]), numeric(1))
           piste[t - huollettu[, s] < p$huoltovali_h] <- -Inf
           kohteet <- head(order(-piste, seq_len(nz)), p$huoltokohteita)

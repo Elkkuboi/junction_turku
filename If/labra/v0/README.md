@@ -54,9 +54,10 @@ Se tuottaa `grid.csv`, `true_falls.csv` ja `tulokset/kaatumiset.png`.
 
 ## Kartta ja sijainti
 
-Rajaus on 500 × 500 metriä Tuomiokirkon ja Tuomaansillan ympärillä:
-E 240000–240500, N 6711000–6711500, ETRS-TM35FIN (EPSG:3067).
-`x` on itäkoordinaatti ja `y` pohjoiskoordinaatti metreinä. Ruudukossa on 2500 ruutua.
+Rajaus on 300 × 300 metriä VPK-talon ympärillä (Eskelinkatu 5):
+E 239280–239580, N 6710600–6710900, ETRS-TM35FIN (EPSG:3067).
+`x` on itäkoordinaatti ja `y` pohjoiskoordinaatti metreinä. Ruudukossa on 900 ruutua.
+Joki jää rajauksen ulkopuolelle. Sijainnin lähde: [Suomi.fi, Turun VPK](https://www.suomi.fi/palvelut/palvelupiste/turun-vpk-varsinais-suomen-pelastuslaitos/4fbf2d65-d776-4e3b-8bb5-22e978113125).
 
 Taustakartta: [Maanmittauslaitoksen taustakarttasarja Kapsin WMS-palvelusta](https://kartat.kapsi.fi/),
 CC BY 4.0. `data/alkuperainen/kartta/turku.json` sisältää lähdeosoitteen,
@@ -125,6 +126,9 @@ Kaikki huolto on simuloitua: aikatauluvaihtoehto ei kuvaa Turun todellista toimi
 Ifin asiakkaita tai euroja ei ole eroteltu. Hyötymittari on kaatumistapahtumien erotus
 samalla toimimäärällä. Yksi ajo ei osoita tuotteen todellista vaikuttavuutta;
 vaihda siementä ja vaikutusoletuksia tuloksen herkkyyden tutkimiseksi.
+
+Hyödyn oletukset, vertailun rajoitus ja tasaisen vaaratason kontrolli:
+[HYOTY.md](HYOTY.md). Kontrollin voi ajaa komennolla `Rscript tarkista_hyoty.R`.
 
 Esimerkiksi kymmenen siementä R:ssä v0-kansiosta:
 

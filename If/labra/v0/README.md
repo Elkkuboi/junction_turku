@@ -52,6 +52,7 @@ Se tuottaa `grid.csv`, `true_falls.csv` ja `tulokset/kaatumiset.png`.
 | `data/alkuperainen/` | Ladattu kartta ja käyttäjän toimittama sää-CSV |
 | `data/oletukset/reitit.csv` | Käsin hahmotellut esimerkkireitit ja oletetut tuntimäärät |
 | `data/johdettu/`, `tulokset/` | Uudelleen tuotettavat tulokset, Gitin ulkopuolella |
+| `paperi/` | Mallin matemaattinen kuvaus ja todistukset (`simulaattori.pdf`), taulukoiden laskenta |
 
 ## Kartta ja sijainti
 
@@ -143,6 +144,14 @@ erotus samalla toimimäärällä. Yksi ajo ei osoita tuotteen todellista vaikutt
 vaihda siementä ja oletuksia tuloksen herkkyyden tutkimiseksi.
 
 Hyödyn ehdot ja kontrollit: [HYOTY.md](HYOTY.md).
+
+Paperin taulukot lasketaan uudelleen ja paperi käännetään v0-kansiosta.
+Laskenta kestää neljällä ytimellä noin 10 minuuttia; kääntämiseen tarvitaan pdfLaTeX.
+
+```sh
+Rscript paperi/laske_taulukot.R
+paperi/kaanna.sh
+```
 
 Esimerkiksi 40 siementä neljällä ytimellä R:ssä v0-kansiosta:
 

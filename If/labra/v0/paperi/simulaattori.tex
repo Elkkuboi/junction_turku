@@ -1,0 +1,804 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[finnish]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{lause}{Lause}
+\newtheorem{lemma}{Lemma}
+\newtheorem{propositio}{Propositio}
+\newtheorem{seuraus}{Seuraus}
+\theoremstyle{definition}
+\newtheorem{maaritelma}{Määritelmä}
+\newtheorem{oletus}{Oletus}
+\theoremstyle{remark}
+\newtheorem{huomautus}{Huomautus}
+
+\newcommand{\E}{\mathbb{E}}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cZ}{\mathcal{Z}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\pol}[1]{\texttt{#1}}
+\newcommand{\Bin}{\operatorname{Bin}}
+\newcommand{\Poi}{\operatorname{Poisson}}
+\newcommand{\Beta}{\operatorname{Beta}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+% Taulukon rivit tiedostosta; primitiivinen \input toimii tabular-ympäristön sisällä.
+\newcommand{\rivit}[1]{\csname @@input\endcsname #1 }
+
+\title{Tärinähavaintoihin perustuvan hiekoituksen kohdistamisen hyöty\\[4pt]
+\large Liukkaussimulaattorin matemaattinen malli ja todistus}
+\author{Elias Wuolijoki\\ \small Junction Turku 2026, If-haaste}
+\date{17.10.2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Kuvaamme täsmällisesti tiedostossa \texttt{If/labra/v0/R/simuloi\_tammikuu.R}
+toteutetun simulaattorin. Turun keskustan kulkuruuduilla on päivittäin vaihtuva
+piilevä liukkaus, ohikulut ovat Poisson-jakautuneita, ja puhelimen tärinätunnistus
+havaitsee liukastumisia virheineen. Huolto hiekoittaa rajallisen määrän alueita
+kerrallaan, eikä päällekkäinen hiekoitus ole sallittu. Osoitamme, että
+kun hiekoituksen vaikutus päättyy ennen seuraavaa huoltokierrosta,
+tärinähavainnoista laskettuun beta-binomiaaliseen posterioriin perustuva
+kohdistus tuottaa odotusarvoltaan enintään yhtä paljon kaatumisia kuin mikään
+politiikka, joka ei käytä havaintoja. Parhaaseen niistä verrattuna ero on
+aidosti positiivinen, kun tunnistus erottelee
+liukastumiset virhehälytyksistä ja liukkaus vaihtelee ruuduittain. Kumpikin ehto
+on myös välttämätön. Lisäksi näytämme, että paras havaintoja käyttämätön
+politiikka hiekoittaa vilkkaimmat alueet. Tulokset koskevat simuloitua maailmaa;
+Turun todellista liukkautta tai Ifin vahinkoja ei ole mitattu.
+\end{abstract}
+
+\tableofcontents
+
+\section{Johdanto}
+
+Palveluidean ytimessä on väite: jos kävelijöiden puhelimet tunnistavat
+liukastumisia, hiekoitus voidaan ohjata paikkoihin, joissa siitä on eniten
+hyötyä. Simulaattori on rakennettu tämän väitteen tutkimiseen. Tässä paperissa
+väite muotoillaan lauseeksi ja todistetaan simulaattorin mallissa.
+
+\paragraph{Tulokset lyhyesti.}
+Olkoon $J(\pi)$ politiikan $\pi$ odotettu kaatumisten määrä tammikuussa.
+Oletusten~\ref{ol:A} ja~\ref{ol:B} vallitessa
+(hiekoituksen vaikutus päättyy ennen seuraavaa huoltokierrosta, ja vaikutusaika
+on yhden vuorokauden sisällä) pätee
+\[
+  J(\pol{oraakkeli}) \;\le\; J(\pol{tuote}) \;<\; J(\pol{kulku})
+  \;\le\; J(\pol{aikataulu}) \;\le\; J(\pol{ei\_huoltoa}).
+\]
+Keskimmäinen epäyhtälö on aito lauseen~\ref{la:aito} ehdoilla, jotka
+simulaattorin oletusarvot täyttävät. Lause~\ref{la:sokea} osoittaa, että
+\pol{kulku} on paras kaikista politiikoista, jotka eivät käytä
+tärinähavaintoja. Siksi tulos ei koske vain aikataulun mukaista huoltoa.
+Lause~\ref{la:valttamaton} näyttää, että ilman ruutujen välistä vaihtelua tai
+ilman tunnistuksen erottelukykyä hyöty on täsmälleen nolla.
+
+\paragraph{Mitä tässä ei väitetä.}
+Lauseet koskevat mallia, jossa palvelu tuntee mallin rakenteen ja
+parametrit. Ne eivät osoita, että Turun kävelyväylien liukkaus noudattaisi tätä
+mallia, että hiekoituksen vaikutus olisi 80 prosenttia tai että tärinätunnistus
+toimisi kuvatulla tarkkuudella. Hyödyn suuruus riippuu näistä oletuksista;
+luvussa~\ref{sec:numeeriset} sitä arvioidaan simuloimalla.
+
+\section{Malli}\label{sec:malli}
+
+\subsection{Aika, paikka ja eksogeeniset suureet}
+
+Aika etenee tunneittain, $t \in \cT = \{1, \dots, T\}$, missä $T = 744$
+(1.--31.1.2026). Tunti $t = 1$ on 1.1.2026 klo 00--01 Suomen aikaa.
+Funktio $d\colon \cT \to \{1, \dots, 31\}$ antaa tunnin paikallisen
+vuorokauden. Se on kasvava, ja vuorokausi vaihtuu keskiyöllä.
+
+Tarkastelualue on $300 \times 300$ metrin neliö VPK-talon ympärillä
+(ETRS-TM35FIN). Se on jaettu $10 \times 10$ metrin ruutuihin. Malliin kuuluvat
+ne $|\cC| = 85$ ruutua $c \in \cC$, joiden keskipiste on enintään 5 metrin
+päässä jostakin neljästä käsin piirretystä reitistä. Huoltoalueet
+$z \in \cZ$ ovat $50 \times 50$ metrin neliöitä, joissa on vähintään yksi
+kulkuruutu; niitä on $|\cZ| = 20$. Kuvaus $\zeta\colon \cC \to \cZ$ kertoo
+ruudun alueen, ja $\cC_z = \zeta^{-1}(z)$.
+
+Seuraavat suureet ovat deterministisiä ja kaikkien politiikkojen tiedossa.
+\begin{itemize}[leftmargin=*]
+  \item \emph{Kulkemisen perustaso} $\lambda_c > 0$: niiden reittien
+  tuntimäärien summa, joiden lähellä ruutu on. Alueen tasolla
+  $\lambda(z) = \sum_{c \in \cC_z} \lambda_c$.
+  \item \emph{Vuorokausirytmi}. Olkoon $h_t$ tunnin $t$ alkamiskellonaika Suomen
+  aikaa. Tällöin
+  \[
+    r_t = \Bigl(0{,}1 + 0{,}8\, e^{-((h_t - 8)/2)^2} + 0{,}9\, e^{-((h_t - 17)/3)^2}\Bigr)
+    \cdot \begin{cases} 0{,}7, & \text{lauantai tai sunnuntai},\\ 1, & \text{muulloin}.\end{cases}
+  \]
+  \item \emph{Sääkerroin}. Turku Artukaisen mitatuista tuntikeskiarvoista
+  (lämpötila $T_t$, lumensyvyys $s_t$, sade $q_t$) lasketaan
+  \[
+    w_t = 0{,}7 + 1{,}2 \cdot \1\{-3 \le T_t \le 1\} + 0{,}6 \cdot \1\{s_t > 0\}
+          + 0{,}5 \cdot \1\{q_t > 0,\ T_t < 1\} \in [0{,}7;\ 3{,}0].
+  \]
+  Liukastumisen perustodennäköisyys on $\pi_t = p_0 w_t$, missä $p_0 = 0{,}01$.
+\end{itemize}
+Sääkerroin on simulaattorin oma kokeellinen sääntö. Sitä ei ole kalibroitu
+tienpinnan havaintoihin.
+
+\subsection{Piilevä liukkaus}
+
+\begin{maaritelma}[Liukkaustasot]\label{maar:tasot}
+Olkoot $a, b > 0$, $G \in \mathbb{N}$, $B \sim \Beta(a,b)$ ja $F$ sen
+kertymäfunktio. Asetetaan $q_j = F^{-1}(j/G)$, $j = 0, \dots, G$, ja
+\[
+  \ell_g = \E\bigl[B \mid q_{g-1} < B \le q_g\bigr], \qquad g = 1, \dots, G.
+\]
+Liukkauden jakauma on $\nu = \frac{1}{G} \sum_{g=1}^{G} \delta_{\ell_g}$, ja
+sen odotusarvo on $\mu = \sum_g \nu_g \ell_g$.
+\end{maaritelma}
+
+\begin{lemma}\label{le:tasot}
+Määritelmän~\ref{maar:tasot} tasoille pätee:
+\begin{enumerate}[label=(\roman*)]
+  \item $\ell_g = G \cdot \frac{a}{a+b} \bigl(I_{q_g}(a+1, b) - I_{q_{g-1}}(a+1, b)\bigr)$,
+  missä $I_x$ on säännöllistetty epätäydellinen beetafunktio;
+  \item $0 < \ell_1 < \ell_2 < \dots < \ell_G < 1$, kun $G \ge 1$;
+  \item $\mu = a/(a+b)$.
+\end{enumerate}
+Erityisesti kun $b = 1$, on $F(x) = x^a$ ja
+$\ell_g = \frac{G a}{a+1}\bigl((g/G)^{(a+1)/a} - ((g-1)/G)^{(a+1)/a}\bigr)$.
+Oletusarvoilla $a = 1/4$, $b = 1$ saadaan
+$\ell_g = \bigl(g^5 - (g-1)^5\bigr)/(5 G^4)$.
+\end{lemma}
+
+\begin{proof}
+Olkoon $f_{a,b}$ beetajakauman tiheys. Koska $B(a+1, b)/B(a, b) = a/(a+b)$,
+pätee $x f_{a,b}(x) = \frac{a}{a+b} f_{a+1,b}(x)$. Jokaisen välin
+$(q_{g-1}, q_g]$ todennäköisyys on $1/G$, joten
+\[
+  \ell_g = G \int_{q_{g-1}}^{q_g} x f_{a,b}(x)\,dx
+         = G \frac{a}{a+b} \int_{q_{g-1}}^{q_g} f_{a+1,b}(x)\,dx,
+\]
+mikä on (i). Tiheys on positiivinen välillä $(0,1)$, joten
+$0 = q_0 < q_1 < \dots < q_G = 1$, ja ehdollinen odotusarvo on aidosti välin
+sisällä: $q_{g-1} < \ell_g < q_g$. Tästä seuraa (ii). Kohta (iii) seuraa
+kokonaisodotusarvon kaavasta:
+$\mu = \sum_g \frac{1}{G} \E[B \mid \text{väli } g] = \E B$.
+Kun $b = 1$, on $f(x) = a x^{a-1}$, $F(x) = x^a$ ja $q_j = (j/G)^{1/a}$, joten
+$\ell_g = G \int_{q_{g-1}}^{q_g} a x^a\,dx = \frac{G a}{a+1}\bigl(q_g^{a+1} - q_{g-1}^{a+1}\bigr)$,
+ja $q_g^{a+1} = (g/G)^{(a+1)/a}$. Arvolla $a = 1/4$ on $Ga/(a+1) = G/5$ ja $(a+1)/a = 5$.
+\end{proof}
+
+Oletusarvoilla ($a = 1/4$, $b = 1$, $G = 40$) on $\mu = 0{,}2$,
+$\ell_1 \approx 7{,}8 \cdot 10^{-8}$ ja $\ell_{40} \approx 0{,}951$.
+Jatkuvassa jakaumassa $\P(B < 0{,}004) = 0{,}004^{1/4} \approx 0{,}25$ ja
+$\P(B > 0{,}5) = 1 - 0{,}5^{1/4} \approx 0{,}16$. Neljännes ruuduista on siis
+käytännössä pitäviä, ja joka kuudes on hyvin liukas.
+
+\begin{maaritelma}[Liukkauden dynamiikka]\label{maar:dynamiikka}
+Olkoon $\rho \in [0, 1]$ pysyvyys. Jokaiselle ruudulle $c$ asetetaan
+$L_{c,1} \sim \nu$. Kun $d \ge 1$, $L_{c,d+1} = L_{c,d}$ todennäköisyydellä
+$\rho$, ja muuten $L_{c,d+1}$ arvotaan uudelleen jakaumasta $\nu$. Kaikki
+arvonnat ovat riippumattomia ruutujen ja päivien välillä.
+\end{maaritelma}
+
+\begin{lemma}\label{le:markov}
+Kaikilla $c$, $d$ ja $j \ge 0$ pätee $L_{c,d} \sim \nu$ ja
+$\E[L_{c,d+j} \mid L_{c,1}, \dots, L_{c,d}] = \mu + \rho^j (L_{c,d} - \mu)$.
+\end{lemma}
+
+\begin{proof}
+Siirtymäydin on $P(\ell_g, \ell_h) = \rho \1\{g = h\} + (1-\rho)\nu_h$, ja
+$\nu P = \rho \nu + (1-\rho)\nu = \nu$. Koska alkujakauma on $\nu$, induktio
+antaa $L_{c,d} \sim \nu$. Markovin ominaisuuden nojalla
+$\E[L_{c,d+1} \mid L_{c,\le d}] = \rho L_{c,d} + (1-\rho)\mu$, ja väite seuraa
+induktiolla luvun $j$ suhteen.
+\end{proof}
+
+Simulaattorin oletus on $\rho = 0$: ruudun liukkaus arvotaan joka päivä
+uudelleen.
+
+\subsection{Ohikulut, liukastumiset, kaatumiset ja havainnot}
+
+\begin{maaritelma}[Todennäköisyysavaruus]\label{maar:avaruus}
+Todennäköisyysavaruudella $(\Omega, \cA, \P)$ on seuraavat keskenään
+riippumattomat satunnaissuureiden perheet:
+\begin{enumerate}[label=(\alph*)]
+  \item ohikulut $N_{c,t} \sim \Poi(\lambda_c r_t)$, riippumattomia kaikilla $(c,t)$;
+  \item liukkauden arvonnat määritelmän~\ref{maar:dynamiikka} mukaisesti;
+  \item ohikulkukohtaiset tasajakautuneet suureet $U_{c,t,i,j}$,
+  $i \in \mathbb{N}$, $j \in \{1, 2, 3\}$;
+  \item sokean politiikan mahdollinen satunnaistus $V$ (määritelmä~\ref{maar:politiikka}).
+\end{enumerate}
+Merkitään tunnin $t$ satunnaisuutta
+$\Psi_t = (N_{c,t}, U_{c,t,i,j})_{c, i, j}$ ja koko liukkausprosessia $L$.
+Tällöin $L, V, \Psi_1, \Psi_2, \dots$ ovat riippumattomia.
+\end{maaritelma}
+
+Olkoon $\gamma_{c,t} \in \{0,1\}$ tieto siitä, onko ruudun $c$ alue hiekoitettu
+tunnilla $t$; se määräytyy politiikasta (luku~\ref{sec:huolto}). Olkoot
+$e \in [0,1]$ hiekoituksen teho, $\varphi$ kaatumisen todennäköisyys
+liukastumisesta, $\eta$ tunnistuksen herkkyys ja $\varepsilon$
+virhehavainnon todennäköisyys. Liukastumisen todennäköisyys ohikulkua kohti on
+\begin{equation}\label{eq:p}
+  p_{c,t} = \pi_t\, L_{c,d(t)}\, (1 - e\,\gamma_{c,t}).
+\end{equation}
+Oletamme, että $\pi_t \ell_G < 1$ kaikilla $t$. Oletusarvoilla
+$\max_t \pi_t \ell_G \le 0{,}03 \cdot 0{,}951$.
+
+Ohikulku $i = 1, \dots, N_{c,t}$ johtaa liukastumiseen, jos
+$U_{c,t,i,1} \le p_{c,t}$. Liukastuminen johtaa kaatumiseen, jos
+$U_{c,t,i,2} \le \varphi$. Tärinätunnistus hälyttää, jos ohikulku on johtanut
+liukastumiseen ja $U_{c,t,i,3} \le \eta$, tai jos liukastumista ei ole tapahtunut
+ja $U_{c,t,i,3} \le \varepsilon$. Merkitään liukastumisten, kaatumisten ja
+havaintojen määriä $S_{c,t}$, $F_{c,t}$ ja $D_{c,t}$.
+
+\begin{lemma}[Havaintojen ja kaatumisten jakauma]\label{le:havainnot}
+Olkoon $\cG_t = \sigma(L, V, \Psi_1, \dots, \Psi_{t-1}, N_{\cdot,t})$, ja olkoon
+$\gamma_{\cdot,t}$ $\sigma(L, V, \Psi_{<t})$-mitallinen. Tällöin ehdolla $\cG_t$
+suureet $D_{c,t}$, $c \in \cC$, ovat riippumattomia ja
+\[
+  D_{c,t} \sim \Bin\bigl(N_{c,t}, \theta_t(L_{c,d(t)}, \gamma_{c,t})\bigr),
+  \qquad \theta_t(\ell, \gamma) = \varepsilon + (\eta - \varepsilon)\, \pi_t\, \ell\, (1 - e \gamma).
+\]
+Lisäksi $\E[F_{c,t} \mid \cG_t] = \varphi\, N_{c,t}\, p_{c,t}$.
+\end{lemma}
+
+\begin{proof}
+Ehdolla $\cG_t$ suure $p_{c,t}$ on tunnettu, ja $U_{c,t,\cdot,\cdot}$ on
+riippumaton $\cG_t$:stä. Ohikulun hälytyksen todennäköisyys on
+$p_{c,t}\eta + (1 - p_{c,t})\varepsilon = \theta_t(L_{c,d(t)}, \gamma_{c,t})$,
+ja ohikulut ovat riippumattomia. Samoin ohikulku johtaa kaatumiseen
+todennäköisyydellä $p_{c,t}\varphi$.
+\end{proof}
+
+\begin{huomautus}[Toteutus ja yhteiset satunnaisluvut]\label{hu:crn}
+Koodi arpoo summat $S$, $F$ ja $D$ suoraan binomijakaumista käänteisen
+kertymäfunktion avulla. Sama tasajakautunut luku syötetään jokaiselle
+politiikalle. Ehdolla $(N_{c,t}, p_{c,t})$ määrien yhteisjakauma on sama kuin
+yllä. Jokaisen politiikan oma reunajakauma on siis täsmälleen tämä malli, ja
+lauseet koskevat juuri sitä. Yhteiset satunnaisluvut kytkevät politiikat vain
+pienentääkseen erotusten estimoinnin varianssia.
+\end{huomautus}
+
+\subsection{Huolto}\label{sec:huolto}
+
+\begin{maaritelma}[Huoltokierrokset]\label{maar:huolto}
+Olkoot $\Delta, H, K \in \mathbb{N}$: huoltoväli, vaikutusaika ja alueiden
+määrä kierroksella. Kierrokset alkavat tunneilla
+$\tau_k = 1 + (k-1)\Delta$, $k = 1, \dots, \kappa$, missä
+$\kappa = \lceil T/\Delta \rceil$. Kierroksen vaikutusikkuna on
+$W_k = \{\tau_k, \dots, \tau_k + H - 1\} \cap \cT$. Kierroksella valitaan
+joukko $A_k \subseteq \cZ$, jossa $|A_k| = K$. Valinta saa tehdä vain kelpoisista
+alueista:
+\[
+  A_k \subseteq E_k = \cZ \setminus \bigcup\bigl\{A_j : j < k,\ \tau_j + H > \tau_k\bigr\}.
+\]
+Tämä on \emph{päällekkäisen hiekoituksen kielto}. Hiekoitustieto on
+$\gamma_{c,t} = \1\{\exists k : \zeta(c) \in A_k,\ t \in W_k\}$.
+\end{maaritelma}
+
+\begin{lemma}\label{le:erilliset}
+Kiellon voimassa ollessa saman alueen vaikutusikkunat ovat erillisiä, joten
+$\gamma_{c,t} = \sum_{k} \1\{\zeta(c) \in A_k\}\, \1\{t \in W_k\}$.
+\end{lemma}
+
+\begin{proof}
+Olkoot $j < k$ ja $z \in A_j \cap A_k$. Kelpoisuuden mukaan
+$\tau_j + H \le \tau_k$, joten $\max W_j < \tau_k = \min W_k$. Siksi summassa
+on enintään yksi nollasta poikkeava termi.
+\end{proof}
+
+\subsection{Informaatio ja politiikat}
+
+\begin{maaritelma}[Politiikka]\label{maar:politiikka}
+Palvelun informaatio tunnin $t$ lopussa on
+$\cF_t = \sigma(N_{c,s}, D_{c,s} : c \in \cC,\ s \le t)$, ja $\cF_0$ on triviaali.
+\emph{Politiikka} on sääntö, jonka valinta $A_k$ on
+$\cF_{\tau_k - 1}$-mitallinen ja kelpoinen. Koska $D$ riippuu aiemmista
+valinnoista, $\cF_t = \cF^\pi_t$ riippuu politiikasta.
+\begin{itemize}[leftmargin=*]
+  \item Politiikka on \emph{sokea}, jos $A_k$ on mitallinen $\sigma$-algebran
+  $\cB_{\tau_k - 1} \vee \sigma(V)$ suhteen, missä
+  $\cB_t = \sigma(N_{c,s} : s \le t)$ ja $V$ on muusta riippumaton
+  satunnaistus. Sokea politiikka ei siis käytä tärinähavaintoja.
+  \item \emph{Oraakkelin} informaatio on
+  $\cH_k = \sigma\bigl(L_{\cdot,d} : d \le d(\tau_k);\ \Psi_s : s < \tau_k\bigr)$.
+  Se tuntee kuluvan päivän liukkauden mutta ei tulevaa satunnaisuutta.
+  Jokaisella politiikalla $\cF^\pi_{\tau_k - 1} \subseteq \cH_k$.
+\end{itemize}
+\end{maaritelma}
+
+\begin{maaritelma}[Tavoite]
+Politiikan $\pi$ arvo on odotettu kaatumisten määrä
+$J(\pi) = \E^\pi\bigl[\sum_{c \in \cC} \sum_{t \in \cT} F_{c,t}\bigr]$.
+Simulaattorin sarake \texttt{expected\_falls} on
+$\sum_{c,t} \varphi N_{c,t} p_{c,t}$. Lemman~\ref{le:havainnot} ja
+torniominaisuuden nojalla sen odotusarvo on $J(\pi)$. Se on harhaton
+estimaattori, jonka varianssi on pienempi kuin arvottujen kaatumisten.
+\end{maaritelma}
+
+\section{Beta-binomiaalinen posteriori}\label{sec:posteriori}
+
+Olkoon politiikka deterministinen, eli $A_k$ on havaintohistorian
+deterministinen funktio. Kaikki koodin politiikat ovat tällaisia, ja tasapelit
+ratkaistaan alueen numeron mukaan.
+
+\begin{propositio}[Suodin]\label{pr:suodin}
+Ehdolla $\cF_t$ liukkausketjut $(L_{c,d})_d$, $c \in \cC$, ovat riippumattomia.
+Jokaisen ruudun suodatusjakauma
+$w_{c,g}(t) = \P(L_{c,d(t)} = \ell_g \mid \cF_t)$ saadaan rekursiolla.
+\begin{enumerate}[label=(\roman*)]
+  \item Alussa käytetään jakaumaa $\nu$. Päivän vaihtuessa jakauma ennustetaan
+  seuraavalle päivälle: $w \mapsto \rho\, w + (1 - \rho)\nu$.
+  \item Tunnin $t$ havainnot päivittävät jakaumaa:
+  \[
+    w_{c,g}(t) \propto w_{c,g}(t-1)\; \theta_t(\ell_g, \gamma_{c,t})^{D_{c,t}}
+    \bigl(1 - \theta_t(\ell_g, \gamma_{c,t})\bigr)^{N_{c,t} - D_{c,t}}.
+  \]
+\end{enumerate}
+Posteriorin odotusarvo on $m_{c}(t) = \sum_g w_{c,g}(t)\, \ell_g$.
+\end{propositio}
+
+\begin{proof}
+Olkoon $h = (n_{c,s}, \delta_{c,s})_{c \in \cC,\, s \le t}$ havaintohistoria ja
+$l = (l_{c,d})$ liukkauspolku. Politiikka on deterministinen, joten
+$\gamma_{c,s} = \gamma_{c,s}(h_{<s})$. Lemman~\ref{le:havainnot} ja
+peräkkäisen ehdollistamisen nojalla
+\[
+  \P(N_{\le t} = n, D_{\le t} = \delta \mid L = l)
+  = \prod_{s \le t} \prod_{c} \Poi(n_{c,s}; \lambda_c r_s)
+    \binom{n_{c,s}}{\delta_{c,s}} \theta_s\bigl(l_{c,d(s)}, \gamma_{c,s}(h_{<s})\bigr)^{\delta_{c,s}}
+    \bigl(1 - \theta_s(\cdot)\bigr)^{n_{c,s} - \delta_{c,s}}.
+\]
+Polun $l$ funktiona tämä on tulo ruutukohtaisista tekijöistä, ja myös
+priorijakauma on tulomuotoinen. Siksi posteriori on tulomuotoinen. Kunkin
+ruudun posteriori on piilo-Markov-mallin posteriori. Siinä siirtymäydin on
+lemman~\ref{le:markov} $P$ ja tunnin havainnon todennäköisyys on yllä oleva
+binomitekijä. Eteenpäin-algoritmi antaa kohdat (i) ja (ii); ennuste
+$wP = \rho w + (1 - \rho)\nu$.
+\end{proof}
+
+Koodissa tämä on funktio \texttt{paivita\_posteriori} ja päivän vaihdon rivi
+\texttt{logw <- log(p\$pysyvyys * exp(logw) + (1 - p\$pysyvyys) / G)}.
+Simulaattori arpoo $L$:n samasta diskreetistä jakaumasta $\nu$, joten laskettu
+posteriori on tarkka, ei approksimaatio.
+
+\begin{propositio}[Konjugaatti erikoistapaus]\label{pr:konjugaatti}
+Olkoon priori jatkuva $\Beta(a,b)$, ja olkoon havaintojen todennäköisyys
+$\theta = \ell$ eli $\eta = 1$, $\varepsilon = 0$ ja $\pi_s(1 - e\gamma) = 1$.
+Jos saman päivän aikana on $n = \sum_s N_s$ ohikulkua ja $y = \sum_s D_s$
+havaintoa, posteriori on $\Beta(a + y,\ b + n - y)$. Lisäksi
+\[
+  \E[L \mid \text{data}] = \frac{a + y}{a + b + n}
+  = \frac{a + b}{a + b + n}\cdot\frac{a}{a+b} + \frac{n}{a + b + n}\cdot\frac{y}{n},
+\]
+ja $y$:n reunajakauma ehdolla $n$ on beta-binomijakauma $\mathrm{BB}(n, a, b)$.
+\end{propositio}
+
+\begin{proof}
+Posteriorin tiheys on verrannollinen lausekkeeseen
+$\ell^{a-1}(1-\ell)^{b-1} \cdot \ell^{y}(1-\ell)^{n-y}$, mikä on
+$\Beta(a+y, b+n-y)$-tiheyden ydin. Reunajakauma on
+$\binom{n}{y} B(a+y, b+n-y)/B(a,b)$, joka on beta-binomijakauman määritelmä.
+\end{proof}
+
+\paragraph{Intuitio.}
+Priori $\Beta(a,b)$ vastaa $a + b$ kuviteltua ohikulkua, joista $a$ on
+johtanut havaintoon. Posteriorin odotusarvo on painotettu keskiarvo:
+vähällä datalla se pysyy lähellä priorin keskiarvoa ja paljolla datalla
+lähestyy havaittua osuutta $y/n$. Simulaattorissa havainnon todennäköisyys on
+liukkauden \emph{affiini} funktio,
+$\theta = \varepsilon + (\eta - \varepsilon)\pi(1 - e\gamma)\,\ell$. Silloin
+posteriori ei ole beetamuotoinen, ja se lasketaan siksi tarkasti tasojen
+$\ell_1, \dots, \ell_G$ hilassa. Koodin tarkistus
+\texttt{tarkista\_tammikuu.R} varmistaa, että hilalaskenta tuottaa
+proposition~\ref{pr:konjugaatti} tuloksen, kun $G = 4000$.
+
+\section{Hajotelma}\label{sec:hajotelma}
+
+Määritellään alueen $z$ \emph{riskimassa} kierroksen $k$ vaikutusikkunassa:
+\[
+  R_{z,k} = \sum_{c \in \cC_z} \sum_{t \in W_k} N_{c,t}\, \pi_t\, L_{c,d(t)},
+\]
+sekä deterministinen \emph{altistus}
+$\Lambda_{z,k} = \sum_{c \in \cC_z} \lambda_c \sum_{t \in W_k} r_t \pi_t
+= \lambda(z)\, \kappa_k$, missä $\kappa_k = \sum_{t \in W_k} r_t \pi_t > 0$.
+Riskimassa ei riipu politiikasta: se on ohikulkujen ja liukkauden funktio.
+
+\begin{propositio}[Hyödyn hajotelma]\label{pr:hajotelma}
+Olkoon $\cG_k$ mikä tahansa $\sigma$-algebra, jonka suhteen $A_k$ on mitallinen.
+Jokaiselle päällekkäisen hiekoituksen kieltoa noudattavalle politiikalle pätee
+\[
+  J(\pi) = \mathsf{B} - e \varphi \sum_{k=1}^{\kappa}
+  \E^\pi\Bigl[\sum_{z \in A_k} \E[R_{z,k} \mid \cG_k]\Bigr],
+  \qquad \mathsf{B} = \varphi \mu \sum_{c,t} \lambda_c r_t \pi_t = J(\pol{ei\_huoltoa}).
+\]
+\end{propositio}
+
+\begin{proof}
+Lemman~\ref{le:havainnot} ja torniominaisuuden nojalla
+$\E F_{c,t} = \varphi\,\E[N_{c,t}\, \pi_t L_{c,d(t)} (1 - e\gamma_{c,t})]$.
+Lemman~\ref{le:erilliset} mukaan
+\[
+  \sum_{c,t} N_{c,t}\pi_t L_{c,d(t)} \gamma_{c,t}
+  = \sum_k \sum_{z \in A_k} \sum_{c \in \cC_z} \sum_{t \in W_k} N_{c,t}\pi_t L_{c,d(t)}
+  = \sum_k \sum_{z \in A_k} R_{z,k}.
+\]
+Koska $N \perp L$ ja $L_{c,d} \sim \nu$ (lemma~\ref{le:markov}), on
+$\E[N_{c,t}\pi_t L_{c,d(t)}] = \lambda_c r_t \pi_t \mu$. Lopuksi
+$\E[\1\{z \in A_k\} R_{z,k}] = \E[\1\{z \in A_k\}\E[R_{z,k} \mid \cG_k]]$,
+koska $\1\{z \in A_k\}$ on $\cG_k$-mitallinen ja $R_{z,k} \ge 0$ on integroituva.
+\end{proof}
+
+\paragraph{Intuitio.}
+Kielto takaa, että sama ruutu-tunti ei koskaan hyödy kahdesta hiekoituksesta.
+Silloin politiikan hyöty on summa kierroksittaisista valinnoista: kuinka paljon
+riskimassaa valitut alueet keskimäärin sisältävät valintahetken tiedon
+valossa.
+
+\begin{lemma}[Ehdollinen riskimassa]\label{le:ehdollinen}
+Olkoon $\cG \subseteq \sigma(L, V, \Psi_{<\tau_k})$. Merkitään
+$m_{c,d} = \E[L_{c,d} \mid \cG]$. Tällöin
+$\E[R_{z,k} \mid \cG] = \sum_{c \in \cC_z} \lambda_c \sum_{t \in W_k} r_t \pi_t\, m_{c,d(t)}$.
+Erityisesti:
+\begin{enumerate}[label=(\roman*)]
+  \item palvelulle ($\cG = \cF^\pi_{\tau_k - 1}$) $m_{c,d}$ on proposition~\ref{pr:suodin} posteriorin odotusarvo;
+  \item sokealle politiikalle ($\cG = \cB_{\tau_k-1} \vee \sigma(V)$) $m_{c,d} = \mu$, joten $\E[R_{z,k} \mid \cG] = \mu \Lambda_{z,k}$;
+  \item oraakkelille ($\cG = \cH_k$) $m_{c,d} = \mu + \rho^{d - d(\tau_k)}(L_{c,d(\tau_k)} - \mu)$, kun $d \ge d(\tau_k)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Kun $t \ge \tau_k$, suure $N_{c,t}$ on osa satunnaisuutta $\Psi_t$, joten se
+on riippumaton $\sigma$-algebrasta $\sigma(L, V, \Psi_{<\tau_k}) \supseteq \cG \vee \sigma(L)$.
+Siksi $\E[N_{c,t} L_{c,d(t)} \mid \cG] = \E[N_{c,t}]\,\E[L_{c,d(t)} \mid \cG]$.
+Kohdassa (ii) $L$ on riippumaton suureista $N$ ja $V$, joten
+$\E[L_{c,d} \mid \cG] = \E L_{c,d} = \mu$. Kohta (iii) seuraa
+lemmasta~\ref{le:markov}, koska tulevien päivien arvonnat ovat riippumattomia
+$\sigma$-algebrasta $\cH_k$.
+\end{proof}
+
+\section{Päätulokset}\label{sec:lauseet}
+
+\begin{oletus}[Ei siirtymää]\label{ol:A}
+$H \le \Delta$.
+\end{oletus}
+
+\begin{oletus}[Ikkuna yhden vuorokauden sisällä]\label{ol:B}
+Jokaisella $k$ ja jokaisella $t \in W_k$ pätee $d(t) = d(\tau_k)$.
+\end{oletus}
+
+Oletuksen~\ref{ol:A} vallitessa $\tau_j + H \le \tau_j + \Delta \le \tau_k$ aina,
+kun $j < k$. Siksi $E_k = \cZ$, ja kaikki $K$ alueen joukot ovat kelpoisia.
+Simulaattorin oletusarvot ovat $\Delta = H = 6$ ja $K = 2$. Koska 6 jakaa luvun
+24, $\tau_1$ on keskiyöllä eikä tammikuussa ole kesäaikasiirtymää, myös
+oletus~\ref{ol:B} on voimassa.
+
+\begin{maaritelma}[Simulaattorin politiikat]\label{maar:koodi}
+Merkitään $\cA_K = \{A \subseteq \cZ : |A| = K\}$.
+\begin{itemize}[leftmargin=*]
+  \item \pol{ei\_huoltoa}: ei hiekoitusta, $\gamma \equiv 0$.
+  \item \pol{aikataulu}: $K$ seuraavaa kelpoista aluetta kiertävässä järjestyksessä.
+  \item \pol{kulku}: $A_k \in \argmax_{A \in \cA_K} \sum_{z \in A} \Lambda_{z,k}$, eli $K$ aluetta, joilla $\lambda(z)$ on suurin.
+  \item \pol{tuote}: $A_k \in \argmax_{A \in \cA_K} \sum_{z \in A} \hat S_{z,k}$, missä $\hat S_{z,k} = \E[R_{z,k} \mid \cF^{\pol{tuote}}_{\tau_k - 1}]$.
+  \item \pol{oraakkeli}: $A_k \in \argmax_{A \in \cA_K} \sum_{z \in A} \E[R_{z,k} \mid \cH_k]$.
+\end{itemize}
+\end{maaritelma}
+
+\begin{lause}[Paras sokea politiikka]\label{la:sokea}
+Oletuksen~\ref{ol:A} vallitessa jokaiselle sokealle politiikalle $\beta$ pätee
+\[
+  J(\beta) \;\ge\; J^\ast_{\mathrm{sokea}} := \mathsf{B} - e\varphi\mu \sum_{k} \max_{A \in \cA_K} \sum_{z \in A} \Lambda_{z,k}
+  \;=\; J(\pol{kulku}).
+\]
+\end{lause}
+
+\begin{proof}
+Valitaan propositiossa~\ref{pr:hajotelma} $\cG_k = \cB_{\tau_k - 1} \vee \sigma(V)$.
+Lemman~\ref{le:ehdollinen} (ii) mukaan
+$J(\beta) = \mathsf{B} - e\varphi\mu \sum_k \E\bigl[\sum_{z \in A_k} \Lambda_{z,k}\bigr]$.
+Koska $A_k \in \cA_K$, summa on enintään maksimin suuruinen. Politiikka
+\pol{kulku} saavuttaa maksimin jokaisella kierroksella. Koska
+$\Lambda_{z,k} = \lambda(z)\kappa_k$ ja $\kappa_k > 0$, maksimoiva joukko
+koostuu $K$ alueesta, joilla $\lambda(z)$ on suurin.
+\end{proof}
+
+\begin{seuraus}
+$J(\pol{aikataulu}) \ge J(\pol{kulku})$. Sama pätee kaikkiin sääntöihin, jotka
+valitsevat alueet kellonajan, sään tai havaittujen ohikulkujen perusteella.
+\end{seuraus}
+
+\paragraph{Intuitio.}
+Ilman tärinähavaintoja jokaisen ruudun liukkauden paras arvio on keskiarvo
+$\mu$. Hiekoituksen arvo on silloin verrannollinen pelkkään altistukseen.
+Havaittujen ohikulkujen määrä ei kerro mitään liukkaudesta, koska ohikulut ja
+liukkaus ovat mallissa riippumattomia.
+
+\begin{lause}[Tärinähavaintojen arvo]\label{la:arvo}
+Oletuksen~\ref{ol:A} vallitessa pätee $J(\pol{tuote}) \le J^\ast_{\mathrm{sokea}}$.
+Siis $J(\pol{tuote}) \le J(\beta)$ jokaiselle sokealle politiikalle $\beta$.
+Tarkemmin
+\[
+  J(\pol{kulku}) - J(\pol{tuote}) = e\varphi \sum_{k} \E\Bigl[\max_{A \in \cA_K} \sum_{z \in A} \hat S_{z,k}
+  - \sum_{z \in A^{\pol{kulku}}_k} \hat S_{z,k}\Bigr] \;\ge\; 0,
+\]
+missä jokainen odotusarvon sisällä oleva termi on pisteittäin ei-negatiivinen.
+\end{lause}
+
+\begin{proof}
+Valitaan propositiossa~\ref{pr:hajotelma} $\cG_k = \cF^{\pol{tuote}}_{\tau_k - 1}$:
+\[
+  J(\pol{tuote}) = \mathsf{B} - e\varphi \sum_k \E\Bigl[\max_{A \in \cA_K}\sum_{z \in A}\hat S_{z,k}\Bigr].
+\]
+Joukko $A^{\pol{kulku}}_k$ on deterministinen, ja
+$\E \hat S_{z,k} = \E R_{z,k} = \mu \Lambda_{z,k}$. Siksi
+$\E\bigl[\sum_{z \in A^{\pol{kulku}}_k} \hat S_{z,k}\bigr] = \mu \max_{A}\sum_{z \in A}\Lambda_{z,k}$.
+Vähentämällä saadaan erotuksen kaava. Termi on ei-negatiivinen, koska maksimi
+on vähintään sen arvo missä tahansa joukossa, myös joukossa $A^{\pol{kulku}}_k$.
+\end{proof}
+
+\paragraph{Intuitio.}
+Tärinähavaintoja käyttävä palvelu voi aina valita saman joukon kuin paras
+sokea politiikka. Se poikkeaa siitä vain, kun posteriori lupaa enemmän
+riskimassaa. Posteriorin odotusarvo on keskimäärin priori, joten poikkeamat
+eivät voi keskimäärin huonontaa valintaa. Kyseessä on epäyhtälö
+$\E \max \ge \max \E$, informaation arvon perustulos.
+
+\begin{lause}[Oraakkeli]\label{la:oraakkeli}
+Oletuksen~\ref{ol:A} vallitessa $J(\pol{oraakkeli}) \le J(\pi)$ jokaiselle
+politiikalle $\pi$, erityisesti $J(\pol{oraakkeli}) \le J(\pol{tuote})$.
+\end{lause}
+
+\begin{proof}
+Koska $\cF^\pi_{\tau_k - 1} \subseteq \cH_k$, joukko $A^\pi_k$ on
+$\cH_k$-mitallinen. Proposition~\ref{pr:hajotelma} nojalla
+$J(\pi) = \mathsf{B} - e\varphi\sum_k \E\bigl[\sum_{z \in A^\pi_k}\E[R_{z,k}\mid\cH_k]\bigr]$.
+Sisempi summa on enintään
+$\max_{A \in \cA_K}\sum_{z \in A}\E[R_{z,k}\mid\cH_k]$, ja oraakkeli
+saavuttaa tämän maksimin.
+\end{proof}
+
+\begin{lause}[Aito hyöty]\label{la:aito}
+Oletetaan oletukset~\ref{ol:A} ja~\ref{ol:B} sekä seuraavat ehdot:
+\begin{enumerate}[label=(C\arabic*)]
+  \item $0 < \varepsilon < \eta \le 1$, $0 < e < 1$ ja $\varphi > 0$;
+  \item $G \ge 2$;
+  \item $K < |\cZ|$, $\Delta < 24$, ja on olemassa alueet
+  $z^\ast \in A^{\pol{kulku}}_2$ ja $z' \notin A^{\pol{kulku}}_2$, joille
+  $\ell_G\, \lambda(z') > \ell_1\, \lambda(z^\ast)$.
+\end{enumerate}
+Tällöin $J(\pol{tuote}) < J(\pol{kulku})$.
+\end{lause}
+
+\begin{proof}
+Lauseen~\ref{la:arvo} kaavan termit ovat ei-negatiivisia. Riittää siis
+osoittaa, että kierroksella $k = 2$ on positiivisella todennäköisyydellä
+\begin{equation}\label{eq:aito}
+  \max_{A \in \cA_K}\sum_{z \in A}\hat S_{z,2} > \sum_{z \in A^{\pol{kulku}}_2}\hat S_{z,2}.
+\end{equation}
+Kierros $\tau_2 = 1 + \Delta$ on ensimmäisenä päivänä, koska $\Delta < 24$.
+Oletuksen~\ref{ol:B} ja lemman~\ref{le:ehdollinen} nojalla
+$\hat S_{z,2} = \kappa_2 \sum_{c \in \cC_z}\lambda_c m_c$, missä
+$m_c = \E[L_{c,1} \mid \cF_{\Delta}]$ ja $\kappa_2 > 0$. Jos
+$\sum_{c \in \cC_{z'}}\lambda_c m_c > \sum_{c \in \cC_{z^\ast}}\lambda_c m_c$,
+joukko $A^{\pol{kulku}}_2 \setminus\{z^\ast\} \cup \{z'\}$ antaa aidosti
+suuremman summan, ja~\eqref{eq:aito} pätee.
+
+Olkoon $n \in \mathbb{N}$ ja $E_n$ tapahtuma, jossa jokaisella ruudulla
+$c \in \cC_{z'} \cup \cC_{z^\ast}$ on $N_{c,1} = n$ ja $N_{c,s} = 0$, kun
+$2 \le s \le \Delta$. Lisäksi $D_{c,1} = n$, kun $c \in \cC_{z'}$, ja
+$D_{c,1} = 0$, kun $c \in \cC_{z^\ast}$. Koska $\lambda_c r_s > 0$, ja
+ehdon~(C1) sekä oletuksen $\pi_t\ell_G < 1$ nojalla
+$0 < \varepsilon \le \theta_1(\ell, \gamma) < 1$, lemman~\ref{le:havainnot}
+mukaan $\P(E_n) > 0$.
+
+Tapahtumassa $E_n$ propositio~\ref{pr:suodin} antaa ensimmäisenä päivänä
+(priori $\nu$, tunnit $s \ge 2$ eivät sisällä ohikulkuja)
+\[
+  w_{c,g} = \frac{\theta_1(\ell_g,\gamma_c)^n}{\sum_h \theta_1(\ell_h,\gamma_c)^n}
+  \quad (c \in \cC_{z'}), \qquad
+  w_{c,g} = \frac{(1-\theta_1(\ell_g,\gamma_c))^n}{\sum_h (1-\theta_1(\ell_h,\gamma_c))^n}
+  \quad (c \in \cC_{z^\ast}).
+\]
+Ehtojen~(C1) ja~(C2) sekä lemman~\ref{le:tasot} (ii) nojalla $\theta_1(\ell, \gamma)$
+on aidosti kasvava suureen $\ell$ suhteen kummallakin arvolla $\gamma \in \{0, 1\}$.
+Siksi rajalla $n \to \infty$ painot keskittyvät tasolle $G$ alueella $z'$ ja
+tasolle $1$ alueella $z^\ast$. Tällöin
+$m_c \to \ell_G$, kun $c \in \cC_{z'}$, ja $m_c \to \ell_1$, kun $c \in \cC_{z^\ast}$.
+Siis
+\[
+  \sum_{c \in \cC_{z'}}\lambda_c m_c - \sum_{c \in \cC_{z^\ast}}\lambda_c m_c
+  \;\longrightarrow\; \ell_G\lambda(z') - \ell_1\lambda(z^\ast) > 0.
+\]
+Raja ei riipu muusta datasta, koska kunkin ruudun posteriori riippuu vain sen
+omista havainnoista. Valitaan $n$ niin suureksi, että erotus on positiivinen
+tapahtumassa $E_n$. Silloin~\eqref{eq:aito} pätee todennäköisyydellä vähintään
+$\P(E_n) > 0$. Koska $e\varphi > 0$, väite seuraa.
+\end{proof}
+
+Simulaattorin oletusarvot täyttävät ehdot: $\varepsilon = 0{,}0002 < \eta = 0{,}8$,
+$e = 0{,}8$, $\varphi = 0{,}02$, $G = 40$, $K = 2 < 20$ ja $\Delta = 6$.
+Lisäksi $\ell_1/\ell_G \approx 8 \cdot 10^{-8}$, kun taas pienin $\lambda(z)$
+on 16 ja suurin 157 ohikulkua tunnissa. Ehto (C3) on siis voimassa jokaiselle
+parille.
+
+\begin{lause}[Hyödyn välttämättömät ehdot]\label{la:valttamaton}
+Oletuksen~\ref{ol:A} vallitessa:
+\begin{enumerate}[label=(\roman*)]
+  \item jos $\eta = \varepsilon$, niin $J(\pol{tuote}) = J(\pol{kulku})$;
+  \item jos $G = 1$, niin $J(\pol{oraakkeli}) = J(\pol{tuote}) = J(\pol{kulku})$;
+  \item jos $e = 0$ tai $\varphi = 0$, niin kaikilla politiikoilla $J(\pi) = \mathsf{B}$.
+\end{enumerate}
+\end{lause}
+
+\begin{proof}
+(i) Kun $\eta = \varepsilon$, $\theta_t$ ei riipu liukkaudesta, joten
+proposition~\ref{pr:suodin} päivitys ei muuta jakaumaa. Silloin
+$w(t) = \nu$ ja $m_c = \mu$, joten $\hat S_{z,k} = \mu\Lambda_{z,k}$ on
+deterministinen. Lauseen~\ref{la:arvo} erotus on nolla.
+(ii) Kun $G = 1$, $L \equiv \mu$, ja kaikkien kolmen politiikan pisteet ovat
+$\mu\Lambda_{z,k}$.
+(iii) Proposition~\ref{pr:hajotelma} hyötytermin kerroin on $e\varphi = 0$.
+\end{proof}
+
+\begin{seuraus}[Järjestys]
+Oletuksen~\ref{ol:A} vallitessa
+$J(\pol{oraakkeli}) \le J(\pol{tuote}) \le J(\pol{kulku}) \le J(\pol{aikataulu}) \le J(\pol{ei\_huoltoa}) = \mathsf{B}$.
+Kun lauseen~\ref{la:aito} ehdot ovat voimassa, toinen epäyhtälö on aito.
+\end{seuraus}
+
+\begin{huomautus}[Pidempi vaikutusaika]\label{hu:H}
+Kun $H > \Delta$, lemma~\ref{le:erilliset} ja propositio~\ref{pr:hajotelma}
+pätevät edelleen kiellon ansiosta. Kelpoiset joukot $E_k$ kuitenkin riippuvat
+aiemmista valinnoista. Lauseiden todistukset eivät siksi siirry sellaisinaan.
+Havaintoihin perustuva valinta voi esimerkiksi viedä alueen pois käytöstä
+hetkellä, jolloin sokea aikataulu olisi hyödyntänyt sitä. Koodi sallii tämän
+asetelman, mutta sen tulokset ovat taulukossa~\ref{tab:herkkyys} vain empiirisiä.
+\end{huomautus}
+
+\begin{huomautus}[Ahneus]
+\pol{tuote} maksimoi jokaisen kierroksen ehdollisen hyödyn erikseen. Lauseet
+eivät väitä sitä optimaaliseksi kaikkien havaintoja käyttävien politiikkojen
+joukossa. Hiekoitus pienentää alueen tulevien havaintojen
+informatiivisuutta, koska $\theta$ pienenee kertoimella $(1-e)$. Tutkivampi
+politiikka voisi siksi olla parempi. Lauseen~\ref{la:arvo} todistus kuitenkin
+pätee sellaisenaan mille tahansa politiikalle, joka valitsee
+$\argmax_A \sum_{z\in A}\E[R_{z,k} \mid \cG_k]$ jonkin $\sigma$-algebran
+$\cG_k \subseteq \cH_k$ suhteen.
+\end{huomautus}
+
+\section{Koodin ja mallin vastaavuus}\label{sec:koodi}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Symboli & Koodissa (\texttt{tammikuu\_asetukset.R}, \texttt{R/simuloi\_tammikuu.R}) & Oletusarvo \\
+\midrule
+$a, b, G$ & \texttt{liukkaus\_a}, \texttt{liukkaus\_b}, \texttt{liukkaustasoja} & $0{,}25$; $1$; $40$ \\
+$\rho$ & \texttt{pysyvyys} & $0$ \\
+$p_0$ & \texttt{liukastuminen\_p} & $0{,}01$ \\
+$\varphi$ & \texttt{kaatuminen\_liukastumisesta\_p} & $0{,}02$ \\
+$\eta, \varepsilon$ & \texttt{tunnistus\_p}, \texttt{virhehavainto\_p} & $0{,}8$; $0{,}0002$ \\
+$\Delta, H, K$ & \texttt{huoltovali\_h}, \texttt{huollon\_kesto\_h}, \texttt{huoltokohteita} & $6$; $6$; $2$ \\
+$e$ & \texttt{huollon\_teho} & $0{,}8$ \\
+$\ell_g$ & \texttt{liukkaustasot()} & lemma~\ref{le:tasot} \\
+$w_{c,g}$ & \texttt{exp(logw)}, \texttt{paivita\_posteriori()} & propositio~\ref{pr:suodin} \\
+$w_t$, $r_t$ & \texttt{saakerroin()}, \texttt{rytmi} & luku~\ref{sec:malli} \\
+\bottomrule
+\end{tabular}
+\caption{Paperin merkinnät ja simulaattorin muuttujat.}
+\label{tab:parametrit}
+\end{table}
+
+Koodi pisteyttää kierroksella $k$ alueen $z$ lausekkeella
+\[
+  \mathrm{piste}(z) = \sum_{c \in \cC_z}\lambda_c\bigl(\mu A_0 + (m_c - \mu)A_1\bigr),
+  \qquad A_0 = \sum_{t \in W_k} r_t,\quad A_1 = \sum_{t \in W_k} r_t\,\rho^{d(t) - d(\tau_k)},
+\]
+missä $m_c = \mu$ (\pol{kulku}), posteriorin odotusarvo (\pol{tuote}) tai
+$L_{c,d(\tau_k)}$ (\pol{oraakkeli}). Sääkerroin jätetään pois, jotta tulevaa
+säätä ei tarvita.
+
+\begin{propositio}
+Oletusten~\ref{ol:A} ja~\ref{ol:B} vallitessa koodin \pol{kulku}, \pol{tuote}
+ja \pol{oraakkeli} valitsevat määritelmän~\ref{maar:koodi} argmax-joukon.
+\end{propositio}
+
+\begin{proof}
+Oletuksen~\ref{ol:B} vallitessa $A_1 = A_0$, joten
+$\mathrm{piste}(z) = A_0\sum_{c \in \cC_z}\lambda_c m_c$. Lemman~\ref{le:ehdollinen}
+mukaan vastaava tarkka arvo on $\kappa_k\sum_{c \in \cC_z}\lambda_c m_c$, missä
+$m_c$ on sama ehdollinen odotusarvo. Proposition~\ref{pr:suodin} nojalla koodin
+posteriori on tarkka. Koska $A_0 > 0$ ja $\kappa_k > 0$, pisteet ovat toistensa
+positiivisia monikertoja, joten niiden argmax-joukot ovat samat. Oletuksen~\ref{ol:A}
+vallitessa kelpoisuusrajoite ei poista yhtään joukkoa.
+\end{proof}
+
+Tarkistukset \texttt{tarkista\_tammikuu.R} ja \texttt{tarkista\_hyoty.R}
+testaavat seuraavat asiat: diskretoinnin keskiarvon (lemma~\ref{le:tasot}),
+suotimen vastaavuuden suoraan laskettuun posterioriin
+(propositio~\ref{pr:suodin}), konjugaatin erikoistapauksen
+(propositio~\ref{pr:konjugaatti}), päällekkäisen hiekoituksen kiellon myös
+asetelmassa $H > \Delta$, tulevan sään vaikutuksen puuttumisen menneisiin
+päätöksiin ja tapauksen $G = 1$ (lause~\ref{la:valttamaton}~(ii)).
+
+\section{Numeeriset tulokset}\label{sec:numeeriset}
+
+Lauseet kertovat tulosten järjestyksen mutta eivät erojen suuruutta. Erot
+estimoidaan simuloimalla tammikuu 2026 useilla satunnaissiemenillä.
+Jokaisella siemenellä on oma piilevä liukkaus ja omat ohikulut. Kaikki
+politiikat käyttävät samoja satunnaislukuja (huomautus~\ref{hu:crn}).
+Mittarina on \texttt{expected\_falls}. Luottamusvälit ovat muotoa
+$\bar x \pm 1{,}96\, s/\sqrt{n}$ siementen yli; erotukset ovat parittaisia.
+Komento: \texttt{Rscript paperi/laske\_taulukot.R}.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Politiikka $\pi$ & $\hat J(\pi)$ [95 \% LV] & Vähenemä ei huoltoon, \% & $\hat J(\pol{kulku}) - \hat J(\pi)$ [95 \% LV] \\
+\midrule
+\rivit{taulukko_oletus.tex}
+\bottomrule
+\end{tabular}
+\caption{Odotetut kaatumiset tammikuussa oletusasetuksilla (200 siementä).}
+\label{tab:oletus}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrrcrr}
+\toprule
+Asetelma & $n$ & \pol{ei} & \pol{aikat.} & \pol{kulku} & \pol{tuote} & \pol{oraak.} & \pol{kulku}$-$\pol{tuote} [95 \% LV] & $>0$ & Osuus \\
+\midrule
+\rivit{taulukko_herkkyys.tex}
+\bottomrule
+\end{tabular}
+\caption{Herkkyys. Sarake ${>}0$ kertoo, monellako siemenellä \pol{tuote} oli
+\pol{kulku}a parempi. Osuus on $(\hat J(\pol{kulku}) - \hat J(\pol{tuote}))/(\hat J(\pol{kulku}) - \hat J(\pol{oraakkeli}))$:
+kuinka suuren osan täydellisen tiedon edusta tärinähavainnot saavuttavat.}
+\label{tab:herkkyys}
+\end{table}
+
+\input{tulkinta.tex}
+
+\section{Rajoitukset}
+
+\begin{itemize}[leftmargin=*]
+  \item \emph{Malli on tunnettu.} Palvelun posteriori käyttää simulaattorin
+  todellisia parametreja. Väärin määritelty priori tai väärä tunnistustarkkuus
+  voi heikentää tulosta. Lause~\ref{la:arvo} ei kata tätä tapausta.
+  \item \emph{Kaikki ohikulut havaitaan.} Sovelluksen käyttäjäosuus on
+  poistettu. Osittainen otos pienentäisi $n$:ää ja siten informaatiota.
+  Lauseet pätevät edelleen, jos havaitsematon osa on riippumaton liukkaudesta.
+  \item \emph{Riippumattomuus.} Ohikulut, liukastumiset ja hälytykset ovat
+  ehdollisesti riippumattomia. Ihmisten väistely, ryhmät ja saman henkilön
+  toistuvat kulut puuttuvat.
+  \item \emph{Liukkaus on vuorokauden ajan vakio}, ja ruudut ovat keskenään
+  riippumattomia. Spatiaalinen korrelaatio parantaisi todennäköisesti
+  ennustetta, koska naapurit lainaisivat tietoa toisilleen.
+  \item \emph{Sääkerroin, hiekoituksen teho ja kaatumisosuus ovat oletuksia.}
+  Niitä ei ole kalibroitu. Kaatumismäärät eivät ole vakuutusvahinkoja;
+  muunnos euroiksi vaatii erillisen mallin.
+  \item \emph{Reitit ja kulkemismäärät on piirretty käsin}, eivätkä ne ole
+  mitattua aineistoa.
+\end{itemize}
+
+\end{document}

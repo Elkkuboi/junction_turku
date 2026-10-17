@@ -13,6 +13,7 @@ on paikallinen HTML-työkalu datan formaattien ja yksinkertaisten mallien tutkim
 | --- | --- |
 | `If/` | If-haasteen PDF-materiaalit |
 | [If/research/data-model-map/](If/research/data-model-map/README.md) | Interaktiivinen data- ja mallikartta, esimerkit ja ajokomennot |
+| [If/labra/v0/](If/labra/v0/README.md) | R: 10 metrin ruudukko, kaatumisten perussimulaatio ja kuva; ajo-ohje README:ssä |
 | `redstone/` | Redstone / A'Pelago -haasteen PDF-materiaali |
 | `tyx-mylab/` | Tyks x Mylab -haasteen PDF-materiaalit ja osallistujaopas |
 | `tyx-mylab/data/` | Synteettinen mikrobiologia-aineisto CSV-muodossa ja sen kuvaus |

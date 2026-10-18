@@ -1,6 +1,8 @@
-# Live-demon data. Aja v0-kansiosta: Rscript aja_demo.R [kohdekansio]
-# Kirjoittaa kohdekansioon simulation.json ja taustakartan turku-vpk.png.
-# Esimerkiksi Pito-dashboardiin: Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo
+# Live-demon data. Aja v0-kansiosta: Rscript aja_demo.R [kohdekansio] [siemen]
+# Kirjoittaa kohdekansioon simulation.json, taustakartan turku-vpk.png ja käännetyt paperit.
+# Esimerkiksi Pito-dashboardiin siemenellä 42:
+#   Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo 42
+# Muut oletukset ovat tiedostossa tammikuu_asetukset.R; siemenen valintaan: Rscript etsi_siemen.R
 source("asetukset.R")
 source("tammikuu_asetukset.R")
 source("R/luo_grid.R")
@@ -19,6 +21,7 @@ reitit <- read.csv("data/oletukset/reitit.csv")
 pohja <- luo_kulkupohja(luo_grid(alue, ruutukoko_m), reitit, ruutukoko_m, tammikuu$huoltoalue_m)
 kartta <- lue_kartta("data/alkuperainen/kartta/turku.png", alue)
 p <- tammikuu
+if (length(argumentit) >= 2) p$seed <- as.integer(argumentit[2])
 tulos <- simuloi_tammikuu(pohja, saa, p)
 
 kohdistettu <- "tuote"

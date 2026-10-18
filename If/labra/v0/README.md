@@ -168,11 +168,37 @@ write.csv(herkkyys, "tulokset/herkkyys.csv", row.names = FALSE)
 
 Pito-dashboardin demosivu (`dashboard/demo.html` repossa
 [Johottaja/if-hackathon-project](https://github.com/Johottaja/if-hackathon-project))
-lukee tämän simulaattorin tuottaman datan. Kun repot ovat rinnakkain, aja v0-kansiosta:
+lukee tämän simulaattorin tuottaman datan. Julkaistu demo:
+https://johottaja.github.io/if-hackathon-project/
 
-```sh
-Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo
-```
+Demon datan voi tuottaa uudelleen eri oletuksilla tai siemenellä. Repot ovat rinnakkain
+kansiossa `~/Documents/ChatGPT`, ja komennot ajetaan v0-kansiosta.
+
+1. Muuta tarvittaessa oletuksia tiedostossa `tammikuu_asetukset.R`, esimerkiksi
+   `huollon_teho` tai `pysyvyys`. Paperin luvut koskevat oletusarvoja; muutosten jälkeen
+   ne pitää laskea uudelleen (`Rscript paperi/laske_taulukot.R`).
+2. Vertaa siemeniä:
+
+   ```sh
+   Rscript etsi_siemen.R 100
+   ```
+
+   Komento kestää noin minuutin. Se tulostaa siemenet, joilla demon "Falls prevented"
+   -tulos on lähimpänä keskiarvoa ja laskuri harvimmin negatiivinen. Tulokset tallentuvat
+   tiedostoon `tulokset/siemenet.csv`. Valitse edustava siemen, älä parasta: demo kertoo
+   käytetyn siemenen ja 200 siemenen keskiarvon.
+3. Kirjoita demon data valitulla siemenellä, esimerkiksi siemenellä 35:
+
+   ```sh
+   Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo 35
+   ```
+
+4. Tarkista tulos Joonaksen repon `dashboard`-kansiossa komennoilla `npm run build:demo` ja
+   `npm run preview`. Commitoi sen jälkeen `dashboard/public/demo/` ja vie muutos `main`iin.
+   GitHub Pages päivittyy muutamassa minuutissa.
+
+Erillistä sovellusta ei tarvita: R-skriptit ovat nopeita (yksi kuukausi noin 3 sekuntia),
+ja demo on staattinen sivu, joka lukee valmiin datan.
 
 Skripti ajaa oletussimulaation (siemen 42), kopioi käännetyt paperit ja kirjoittaa kohdistetun huollon (`tuote`)
 kaatumiset, tärinähavainnot ja hiekoitukset sekä aikataulun mukaisen huollon

@@ -168,7 +168,7 @@ write.csv(herkkyys, "tulokset/herkkyys.csv", row.names = FALSE)
 
 Pito-dashboardin demosivu (`dashboard/demo.html` repossa
 [Johottaja/if-hackathon-project](https://github.com/Johottaja/if-hackathon-project))
-lukee tämän simulaattorin tuottaman datan. Julkaistu demo:
+lukee tämän simulaattorin tuottaman datan. Julkaistu demo käyttää siementä 35:
 https://johottaja.github.io/if-hackathon-project/
 
 Demon datan voi tuottaa uudelleen eri oletuksilla tai siemenellä. Repot ovat rinnakkain

@@ -142,6 +142,10 @@ demo <- list(
 
 jsonlite::write_json(demo, file.path(kohde, "simulation.json"), auto_unbox = TRUE, digits = NA)
 file.copy(kartta$polku, file.path(kohde, "turku-vpk.png"), overwrite = TRUE)
+# Paperit demon linkeille, jos ne on käännetty (paperi/kaanna.sh).
+for (paperi in c("paperi/paper_en.pdf", "paperi/paperi_fi.pdf")) {
+  if (file.exists(paperi)) file.copy(paperi, file.path(kohde, basename(paperi)), overwrite = TRUE)
+}
 message(sprintf("Demo: %d kaatumista (%d havaittu), %d estetty, %d lisää, %d tärinähavaintoa -> %s",
                 nrow(kaatumiset), sum(kaatumiset$captured), nrow(estetyt), sum(kaatumiset$extra),
                 nrow(havainnot), kohde))

@@ -52,7 +52,7 @@ Se tuottaa `grid.csv`, `true_falls.csv` ja `tulokset/kaatumiset.png`.
 | `data/alkuperainen/` | Ladattu kartta ja käyttäjän toimittama sää-CSV |
 | `data/oletukset/reitit.csv` | Käsin hahmotellut esimerkkireitit ja oletetut tuntimäärät |
 | `data/johdettu/`, `tulokset/` | Uudelleen tuotettavat tulokset, Gitin ulkopuolella |
-| `paperi/` | Mallin matemaattinen kuvaus ja todistukset (`simulaattori.pdf`), taulukoiden laskenta |
+| `paperi/` | Mallin matemaattinen kuvaus ja todistukset suomeksi (`paperi_fi.pdf`) ja englanniksi (`paper_en.pdf`), taulukoiden laskenta |
 | `aja_demo.R` | Live-demon data (`simulation.json`) ja taustakartta Pito-dashboardin demosivulle |
 
 ## Kartta ja sijainti
@@ -146,8 +146,9 @@ vaihda siementä ja oletuksia tuloksen herkkyyden tutkimiseksi.
 
 Hyödyn ehdot ja kontrollit: [HYOTY.md](HYOTY.md).
 
-Paperin taulukot lasketaan uudelleen ja paperi käännetään v0-kansiosta.
+Paperin tulokset lasketaan uudelleen ja paperit käännetään v0-kansiosta.
 Laskenta kestää neljällä ytimellä noin 10 minuuttia; kääntämiseen tarvitaan pdfLaTeX.
+Pelkät taulukot saa tallennetuista tuloksista komennolla `Rscript paperi/kirjoita_taulukot.R`.
 
 ```sh
 Rscript paperi/laske_taulukot.R
@@ -173,7 +174,7 @@ lukee tämän simulaattorin tuottaman datan. Kun repot ovat rinnakkain, aja v0-k
 Rscript aja_demo.R ../../../../if-hackathon-project/dashboard/public/demo
 ```
 
-Skripti ajaa oletussimulaation (siemen 42) ja kirjoittaa kohdistetun huollon (`tuote`)
+Skripti ajaa oletussimulaation (siemen 42), kopioi käännetyt paperit ja kirjoittaa kohdistetun huollon (`tuote`)
 kaatumiset, tärinähavainnot ja hiekoitukset sekä aikataulun mukaisen huollon
 (`aikataulu`) hiekoitukset. Asiakas- ja If-näkymiä varten mukana ovat myös tuotteen
 liukkausarvio (posteriorin odotusarvo) jokaisen tunnin alussa, ruutujen reitit ja

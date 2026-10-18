@@ -1,6 +1,6 @@
 # Mihin simuloitu hyöty perustuu?
 
-Täsmällinen malli, oletukset ja todistukset: [paperi/simulaattori.pdf](paperi/simulaattori.pdf).
+Täsmällinen malli, oletukset ja todistukset: [paperi/paperi_fi.pdf](paperi/paperi_fi.pdf), englanniksi [paperi/paper_en.pdf](paperi/paper_en.pdf).
 Tämä tiedosto tiivistää ne.
 
 Ruudun päivän piilevä liukkaus `L` vaihtelee voimakkaasti ruuduittain ja päivittäin.

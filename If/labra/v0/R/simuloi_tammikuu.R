@@ -1,5 +1,5 @@
 # Paritettu vertailu: sama sää, kulkeminen, piilevä liukkaus ja satunnaisluvut kaikille politiikoille.
-# Mallin ja todistuksen merkinnät: paperi/simulaattori.tex.
+# Mallin ja todistuksen merkinnät: paperi/paperi_fi.tex (englanniksi paper_en.tex).
 
 politiikat <- c("ei_huoltoa", "aikataulu", "kulku", "tuote", "oraakkeli")
 
